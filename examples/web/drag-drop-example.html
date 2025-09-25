@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SCADA Canvas - Drag & Drop Example</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      .canvas-container {
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        position: relative;
+        width: 1200px;
+        height: 700px;
+      }
+
+      #canvas-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      #canvas-container canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .toolbar-group {
+        display: flex;
+        gap: 5px;
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        background: #4caf50;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+      }
+
+      button.active {
+        background: #2196f3;
+      }
+
+      button.danger {
+        background: #f44336;
+      }
+
+      button.danger:hover {
+        background: #da190b;
+      }
+
+      .info-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      .info {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .info h3 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #4caf50;
+        padding-bottom: 5px;
+      }
+
+      .info p {
+        margin: 8px 0;
+        color: #666;
+      }
+
+      .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+
+      .status-indicator.active {
+        background-color: #4caf50;
+      }
+
+      .status-indicator.inactive {
+        background-color: #ccc;
+      }
+
+      .element-list {
+        max-height: 200px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 10px;
+        background: #f9f9f9;
+      }
+
+      .element-item {
+        padding: 5px;
+        margin: 2px 0;
+        background: white;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .element-item:hover {
+        background: #e3f2fd;
+      }
+
+      .element-item.selected {
+        background: #2196f3;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🏭 SCADA Canvas Library - Drag & Drop Example</h1>
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button onclick="addHorizontalPipe()">➕ Add Horizontal Pipe</button>
+          <button onclick="addVerticalPipe()">➕ Add Vertical Pipe</button>
+          <button onclick="addPump()">➕ Add Pump</button>
+          <button onclick="addValve()">➕ Add Valve</button>
+        </div>
+
+        <div class="toolbar-group">
+          <button onclick="selectAll()">🔲 Select All</button>
+          <button onclick="clearSelection()">❌ Clear Selection</button>
+          <button onclick="deleteSelected()" class="danger">
+            🗑️ Delete Selected
+          </button>
+        </div>
+
+        <div class="toolbar-group">
+          <button onclick="zoomIn()">🔍+ Zoom In</button>
+          <button onclick="zoomOut()">🔍- Zoom Out</button>
+          <button onclick="resetView()">🎯 Reset View</button>
+        </div>
+
+        <div class="toolbar-group">
+          <button onclick="toggleGrid()">⊞ Toggle Grid</button>
+          <button onclick="toggleSnapToGrid()">🧲 Toggle Snap</button>
+        </div>
+      </div>
+
+      <div class="canvas-container">
+        <div id="canvas-container"></div>
+      </div>
+
+      <div class="info-panel">
+        <div class="info">
+          <h3>📋 Instructions</h3>
+          <p><strong>🖱️ Select:</strong> Click on elements to select them</p>
+          <p>
+            <strong>🖱️ Multi-Select:</strong> Hold Ctrl/Cmd + click for multiple
+            selection
+          </p>
+          <p>
+            <strong>🖱️ Drag:</strong> Click and drag selected elements to move
+            them
+          </p>
+          <p>
+            <strong>🔄 Resize:</strong> Click and drag the corner handles of
+            selected elements
+          </p>
+          <p>
+            <strong>🖱️ Pan Canvas:</strong> Click and drag on empty space to pan
+          </p>
+          <p><strong>🖱️ Zoom:</strong> Use mouse wheel to zoom in/out</p>
+          <p>
+            <strong>⌨️ Delete:</strong> Press Delete or Backspace to remove
+            selected elements
+          </p>
+          <p>
+            <strong>⌨️ Select All:</strong> Press Ctrl/Cmd + A to select all
+            elements
+          </p>
+        </div>
+
+        <div class="info">
+          <h3>📊 Canvas Status</h3>
+          <p>
+            <span class="status-indicator active"></span>Elements:
+            <span id="element-count">0</span>
+          </p>
+          <p>
+            <span class="status-indicator active"></span>Selected:
+            <span id="selected-count">0</span>
+          </p>
+          <p>
+            <span class="status-indicator active"></span>Zoom:
+            <span id="zoom-level">100%</span>
+          </p>
+          <p>
+            <span class="status-indicator active"></span>Pan:
+            <span id="pan-position">0, 0</span>
+          </p>
+          <p>
+            <span class="status-indicator" id="grid-indicator"></span>Grid:
+            <span id="grid-status">Enabled</span>
+          </p>
+          <p>
+            <span class="status-indicator" id="snap-indicator"></span>Snap to
+            Grid: <span id="snap-status">Disabled</span>
+          </p>
+
+          <h4>🎯 Selected Elements</h4>
+          <div class="element-list" id="selected-elements">
+            <p style="color: #999; font-style: italic">No elements selected</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../dist/index.umd.js"></script>
+
+    <script type="module">
+      // Import the library components
+      const { CanvasManager, ElementFactory } = ScadaCanvas;
+
+      class ScadaApp {
+        constructor() {
+          try {
+            // Get the container div
+            this.canvasContainer = document.getElementById("canvas-container");
+
+            if (!this.canvasContainer) {
+              throw new Error("Canvas container not found");
+            }
+
+            console.log("Initializing CanvasManager...");
+
+            // Create CanvasManager with correct configuration
+            this.canvasManager = new CanvasManager({
+              container: this.canvasContainer,
+              width: 1200,
+              height: 700,
+              backgroundColor: "#ffffff",
+              grid: {
+                enabled: true,
+                size: 20,
+                visible: true,
+                snapToGrid: false,
+              },
+            });
+
+            console.log("CanvasManager initialized successfully");
+
+            // Get the canvas that CanvasManager created
+            this.canvas = this.canvasManager.getCanvas();
+
+            // Set up event listeners for UI updates
+            this.setupEventListeners();
+
+            // Initialize UI
+            this.updateInfo();
+
+            // Add some initial elements
+            this.addInitialElements();
+          } catch (error) {
+            console.error("Error initializing ScadaApp:", error);
+            // Show error message to user
+            document.getElementById("canvas-container").innerHTML =
+              `<div style="padding: 20px; color: red; text-align: center;">
+                            <h3>Error Loading Canvas</h3>
+                            <p>${error.message}</p>
+                            <p>Please check the browser console for more details.</p>
+                        </div>`;
+          }
+        }
+
+        setupEventListeners() {
+          // Listen to canvas events for UI updates
+          this.canvasManager.on("element-added", () => this.updateInfo());
+          this.canvasManager.on("element-removed", () => this.updateInfo());
+          this.canvasManager.on("selection-changed", () => this.updateInfo());
+          this.canvasManager.on("viewport-changed", () => this.updateInfo());
+
+          // Listen to resize events
+          this.canvasManager.on("resizeStart", (data) => {
+            console.log("Resize started:", data);
+          });
+
+          this.canvasManager.on("resizeUpdate", (data) => {
+            this.updateInfo();
+          });
+
+          this.canvasManager.on("resizeEnd", (data) => {
+            console.log("Resize ended:", data);
+            this.updateInfo();
+          });
+        }
+
+        addElement(type, properties) {
+          try {
+            // Use the correct ElementConfig format expected by CanvasManager
+            const elementConfig = {
+              type: type,
+              position: {
+                x: Math.random() * 400 + 100,
+                y: Math.random() * 300 + 100,
+              },
+              size: properties.size,
+              properties: {
+                color: properties.color,
+                borderColor: properties.borderColor,
+                ...properties.customProps,
+              },
+            };
+
+            const elementId = this.canvasManager.addElement(elementConfig);
+            console.log("Added element:", elementId, elementConfig);
+            return elementId;
+          } catch (error) {
+            console.error("Error adding element:", error);
+            return null;
+          }
+        }
+
+        updateInfo() {
+          try {
+            const elements = this.canvasManager.getAllElements();
+            const selectedElements = this.canvasManager.getSelectedElements();
+            const viewport = this.canvasManager.getViewport();
+            const grid = this.canvasManager.getGridSettings();
+
+            // Update counters
+            document.getElementById("element-count").textContent =
+              elements.length;
+            document.getElementById("selected-count").textContent =
+              selectedElements.length;
+            document.getElementById("zoom-level").textContent =
+              Math.round(viewport.zoom * 100) + "%";
+            document.getElementById("pan-position").textContent =
+              `${Math.round(viewport.pan.x)}, ${Math.round(viewport.pan.y)}`;
+
+            // Update grid status
+            const gridIndicator = document.getElementById("grid-indicator");
+            const gridStatus = document.getElementById("grid-status");
+            if (grid.enabled) {
+              gridIndicator.className = "status-indicator active";
+              gridStatus.textContent = "Enabled";
+            } else {
+              gridIndicator.className = "status-indicator inactive";
+              gridStatus.textContent = "Disabled";
+            }
+
+            // Update snap status
+            const snapIndicator = document.getElementById("snap-indicator");
+            const snapStatus = document.getElementById("snap-status");
+            if (grid.snapToGrid) {
+              snapIndicator.className = "status-indicator active";
+              snapStatus.textContent = "Enabled";
+            } else {
+              snapIndicator.className = "status-indicator inactive";
+              snapStatus.textContent = "Disabled";
+            }
+
+            // Update selected elements list
+            const selectedList = document.getElementById("selected-elements");
+            if (selectedElements.length === 0) {
+              selectedList.innerHTML =
+                '<p style="color: #999; font-style: italic;">No elements selected</p>';
+            } else {
+              let html = "";
+              selectedElements.forEach((id) => {
+                const element = this.canvasManager.getElement(id);
+                if (element) {
+                  html += `<div class="element-item selected" onclick="focusElement('${id}')">
+                                    ${element.type} (${Math.round(element.position.x)}, ${Math.round(element.position.y)}) - ${Math.round(element.size.width)}×${Math.round(element.size.height)}
+                                </div>`;
+                }
+              });
+              selectedList.innerHTML = html;
+            }
+          } catch (error) {
+            console.error("Error updating info:", error);
+          }
+        }
+
+        addInitialElements() {
+          setTimeout(() => {
+            this.addElement("pipe", {
+              size: { width: 120, height: 20 },
+              color: "#4CAF50",
+              borderColor: "#2E7D32",
+            });
+
+            this.addElement("pipe", {
+              size: { width: 20, height: 120 },
+              color: "#2196F3",
+              borderColor: "#1976D2",
+            });
+
+            this.addElement("pump", {
+              size: { width: 60, height: 60 },
+              color: "#FF9800",
+              borderColor: "#F57C00",
+            });
+          }, 500);
+        }
+      }
+
+      // Initialize the app
+      let app;
+      try {
+        app = new ScadaApp();
+        console.log("App initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize app:", error);
+      }
+
+      // Global functions for buttons - with better error handling
+      window.addHorizontalPipe = () => {
+        if (app && app.canvasManager) {
+          app.addElement("pipe", {
+            size: { width: 120, height: 20 },
+            color: "#4CAF50",
+            borderColor: "#2E7D32",
+          });
+        } else {
+          console.error("App not initialized");
+        }
+      };
+
+      window.addVerticalPipe = () => {
+        if (app && app.canvasManager) {
+          app.addElement("pipe", {
+            size: { width: 20, height: 120 },
+            color: "#2196F3",
+            borderColor: "#1976D2",
+          });
+        } else {
+          console.error("App not initialized");
+        }
+      };
+
+      window.addPump = () => {
+        if (app && app.canvasManager) {
+          app.addElement("pump", {
+            size: { width: 60, height: 60 },
+            color: "#FF9800",
+            borderColor: "#F57C00",
+          });
+        } else {
+          console.error("App not initialized");
+        }
+      };
+
+      window.addValve = () => {
+        if (app && app.canvasManager) {
+          app.addElement("valve", {
+            size: { width: 40, height: 40 },
+            color: "#9C27B0",
+            borderColor: "#7B1FA2",
+          });
+        } else {
+          console.error("App not initialized");
+        }
+      };
+
+      window.selectAll = () => {
+        if (app && app.canvasManager) {
+          app.canvasManager.selectAllElements();
+        }
+      };
+
+      window.clearSelection = () => {
+        if (app && app.canvasManager) {
+          app.canvasManager.clearSelection();
+        }
+      };
+
+      window.deleteSelected = () => {
+        if (app && app.canvasManager) {
+          const selectedElements = app.canvasManager.getSelectedElements();
+          selectedElements.forEach((id) => {
+            app.canvasManager.removeElement(id);
+          });
+        }
+      };
+
+      window.zoomIn = () => {
+        if (app && app.canvasManager) {
+          const currentZoom = app.canvasManager.getViewport().zoom;
+          app.canvasManager.setZoom(currentZoom * 1.2);
+        }
+      };
+
+      window.zoomOut = () => {
+        if (app && app.canvasManager) {
+          const currentZoom = app.canvasManager.getViewport().zoom;
+          app.canvasManager.setZoom(currentZoom * 0.8);
+        }
+      };
+
+      window.resetView = () => {
+        if (app && app.canvasManager) {
+          app.canvasManager.setZoom(1);
+          app.canvasManager.setPan({ x: 0, y: 0 });
+        }
+      };
+
+      window.toggleGrid = () => {
+        if (app && app.canvasManager) {
+          const currentGrid = app.canvasManager.getGridSettings();
+          app.canvasManager.setGridSettings({
+            enabled: !currentGrid.enabled,
+            visible: !currentGrid.enabled,
+          });
+          app.updateInfo();
+        }
+      };
+
+      window.toggleSnapToGrid = () => {
+        if (app && app.canvasManager) {
+          const currentGrid = app.canvasManager.getGridSettings();
+          app.canvasManager.setGridSettings({
+            snapToGrid: !currentGrid.snapToGrid,
+          });
+          app.updateInfo();
+        }
+      };
+
+      window.focusElement = (id) => {
+        if (app && app.canvasManager) {
+          const element = app.canvasManager.getElement(id);
+          if (element) {
+            // Center the element in view
+            const viewport = app.canvasManager.getViewport();
+            const centerX =
+              app.canvas.width / 2 -
+              (element.position.x + element.size.width / 2) * viewport.zoom;
+            const centerY =
+              app.canvas.height / 2 -
+              (element.position.y + element.size.height / 2) * viewport.zoom;
+            app.canvasManager.setPan({ x: centerX, y: centerY });
+          }
+        }
+      };
+    </script>
+  </body>
+</html>

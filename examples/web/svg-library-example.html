@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SCADA Canvas - SVG Element Library</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+      }
+
+      .container {
+        display: flex;
+        gap: 20px;
+        height: calc(100vh - 40px);
+      }
+
+      .library-panel {
+        width: 300px;
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
+      }
+
+      .library-panel h3 {
+        margin-top: 0;
+        color: #333;
+        border-bottom: 2px solid #007bff;
+        padding-bottom: 10px;
+      }
+
+      .search-box {
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+
+      .category-buttons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-bottom: 15px;
+      }
+
+      .category-btn {
+        padding: 5px 10px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .category-btn.active {
+        background: #007bff;
+        color: white;
+      }
+
+      .element-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 10px;
+      }
+
+      .element-item {
+        padding: 10px;
+        background: #f8f9fa;
+        border: 2px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+      }
+
+      .element-item:hover {
+        background: #e9ecef;
+        border-color: #007bff;
+      }
+
+      .element-item.selected {
+        background: #007bff;
+        color: white;
+      }
+
+      .element-name {
+        font-size: 11px;
+        margin-top: 5px;
+      }
+
+      .canvas-area {
+        flex: 1;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        position: relative;
+      }
+
+      #canvas-container {
+        width: 100%;
+        height: 100%;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .toolbar {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
+
+      .toolbar button {
+        margin: 0 5px;
+        padding: 5px 10px;
+        border: 1px solid #ddd;
+        background: white;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .toolbar button:hover {
+        background: #f0f0f0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="library-panel">
+        <h3>🏭 Element Library</h3>
+
+        <input
+          type="text"
+          class="search-box"
+          id="search-input"
+          placeholder="Search elements..."
+        />
+
+        <div class="category-buttons" id="category-buttons">
+          <button class="category-btn active" data-category="all">All</button>
+        </div>
+
+        <div class="element-grid" id="element-grid">
+          <!-- Elements will be populated here -->
+        </div>
+      </div>
+
+      <div class="canvas-area">
+        <div id="canvas-container"></div>
+
+        <div class="toolbar">
+          <button onclick="clearCanvas()">Clear</button>
+          <button onclick="zoomIn()">Zoom In</button>
+          <button onclick="zoomOut()">Zoom Out</button>
+          <button onclick="resetView()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../dist/index.umd.js"></script>
+
+    <script type="module">
+      const { CanvasManager, ElementLibrary, SVG_ELEMENTS, getAllCategories } =
+        ScadaCanvas;
+
+      class SvgLibraryApp {
+        constructor() {
+          this.initializeCanvas();
+          this.initializeLibrary();
+          this.setupEventListeners();
+          this.populateLibrary();
+        }
+
+        initializeCanvas() {
+          const container = document.getElementById("canvas-container");
+          this.canvasManager = new CanvasManager({
+            container: container,
+            width: 800,
+            height: 600,
+            backgroundColor: "#ffffff",
+            grid: {
+              enabled: true,
+              size: 20,
+              visible: true,
+              snapToGrid: false,
+            },
+          });
+        }
+
+        initializeLibrary() {
+          this.elementLibrary = new ElementLibrary();
+          this.selectedElement = null;
+
+          this.elementLibrary.on("element-selected", (data) => {
+            this.selectedElement = data.element;
+            this.updateElementSelection();
+          });
+        }
+
+        setupEventListeners() {
+          // Search functionality
+          const searchInput = document.getElementById("search-input");
+          searchInput.addEventListener("input", (e) => {
+            this.elementLibrary.setSearchQuery(e.target.value);
+            this.updateElementGrid();
+          });
+
+          // Canvas click to add elements
+          this.canvasManager.on("canvas-clicked", (data) => {
+            if (this.selectedElement) {
+              this.addElementToCanvas(data.position);
+            }
+          });
+        }
+
+        populateLibrary() {
+          this.populateCategories();
+          this.updateElementGrid();
+        }
+
+        populateCategories() {
+          const categoryButtons = document.getElementById("category-buttons");
+          const categories = getAllCategories();
+
+          categories.forEach((category) => {
+            const button = document.createElement("button");
+            button.className = "category-btn";
+            button.textContent = category;
+            button.dataset.category = category;
+            button.addEventListener("click", () => {
+              this.selectCategory(category);
+            });
+            categoryButtons.appendChild(button);
+          });
+        }
+
+        selectCategory(category) {
+          // Update active button
+          document.querySelectorAll(".category-btn").forEach((btn) => {
+            btn.classList.remove("active");
+          });
+          document
+            .querySelector(`[data-category="${category}"]`)
+            .classList.add("active");
+
+          this.elementLibrary.setCategory(category);
+          this.updateElementGrid();
+        }
+
+        updateElementGrid() {
+          const grid = document.getElementById("element-grid");
+          grid.innerHTML = "";
+
+          const elements = this.elementLibrary.getElements();
+
+          elements.forEach((element) => {
+            const item = document.createElement("div");
+            item.className = "element-item";
+            item.dataset.elementId = element.id;
+
+            item.innerHTML = `
+                        <div class="element-icon">📦</div>
+                        <div class="element-name">${element.name}</div>
+                    `;
+
+            item.addEventListener("click", () => {
+              this.elementLibrary.selectElement(element.id);
+            });
+
+            grid.appendChild(item);
+          });
+        }
+
+        updateElementSelection() {
+          document.querySelectorAll(".element-item").forEach((item) => {
+            item.classList.remove("selected");
+          });
+
+          if (this.selectedElement) {
+            const selectedItem = document.querySelector(
+              `[data-element-id="${this.selectedElement.id}"]`
+            );
+            if (selectedItem) {
+              selectedItem.classList.add("selected");
+            }
+          }
+        }
+
+        addElementToCanvas(position) {
+          if (!this.selectedElement) return;
+
+          const elementId = this.canvasManager.addElementFromSvg(
+            this.selectedElement.id,
+            position,
+            this.selectedElement.defaultSize
+          );
+
+          if (elementId) {
+            console.log(`Added ${this.selectedElement.name} to canvas`);
+          }
+        }
+      }
+
+      // Global functions for toolbar
+      window.clearCanvas = function () {
+        app.canvasManager.getAllElements().forEach((element) => {
+          app.canvasManager.removeElement(element.id);
+        });
+      };
+
+      window.zoomIn = function () {
+        const viewport = app.canvasManager.getViewport();
+        app.canvasManager.setZoom(viewport.zoom * 1.2);
+      };
+
+      window.zoomOut = function () {
+        const viewport = app.canvasManager.getViewport();
+        app.canvasManager.setZoom(viewport.zoom / 1.2);
+      };
+
+      window.resetView = function () {
+        app.canvasManager.setZoom(1);
+        app.canvasManager.setPan({ x: 0, y: 0 });
+      };
+
+      // Initialize the application
+      window.app = new SvgLibraryApp();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SCADA Canvas - Basic Example</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .canvas-container {
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        background: #4caf50;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+      }
+
+      .info {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .info h3 {
+        margin-top: 0;
+        color: #333;
+      }
+
+      .info p {
+        margin: 5px 0;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🏭 SCADA Canvas Library - Basic Example</h1>
+
+      <div class="controls">
+        <button onclick="addPipe()">Add Pipe</button>
+        <button onclick="addVerticalPipe()">Add Vertical Pipe</button>
+        <button onclick="clearCanvas()">Clear Canvas</button>
+        <button onclick="zoomIn()">Zoom In</button>
+        <button onclick="zoomOut()">Zoom Out</button>
+        <button onclick="resetView()">Reset View</button>
+      </div>
+
+      <div class="canvas-container">
+        <canvas id="scada-canvas" width="1000" height="600"></canvas>
+      </div>
+
+      <div class="info">
+        <h3>📋 Instructions</h3>
+        <p><strong>Pan:</strong> Click and drag to move around the canvas</p>
+        <p><strong>Zoom:</strong> Use mouse wheel to zoom in/out</p>
+        <p>
+          <strong>Add Elements:</strong> Click the buttons above to add pipe
+          elements
+        </p>
+        <p>
+          <strong>Grid:</strong> The grid helps with alignment and positioning
+        </p>
+      </div>
+
+      <div class="info">
+        <h3>📊 Canvas Info</h3>
+        <p>Elements: <span id="element-count">0</span></p>
+        <p>Zoom: <span id="zoom-level">100%</span></p>
+        <p>Pan: <span id="pan-position">0, 0</span></p>
+      </div>
+    </div>
+
+    <script type="module">
+      // Import the library (in a real project, you'd import from npm)
+      // For this example, we'll create a simple version
+
+      class SimpleCanvasManager {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext("2d");
+          this.elements = [];
+          this.zoom = 1;
+          this.pan = { x: 0, y: 0 };
+          this.isDragging = false;
+          this.lastMousePos = { x: 0, y: 0 };
+
+          this.setupEvents();
+          this.render();
+        }
+
+        setupEvents() {
+          this.canvas.addEventListener("mousedown", (e) => {
+            this.isDragging = true;
+            this.lastMousePos = { x: e.clientX, y: e.clientY };
+          });
+
+          this.canvas.addEventListener("mousemove", (e) => {
+            if (!this.isDragging) return;
+
+            const deltaX = e.clientX - this.lastMousePos.x;
+            const deltaY = e.clientY - this.lastMousePos.y;
+
+            this.pan.x += deltaX;
+            this.pan.y += deltaY;
+
+            this.lastMousePos = { x: e.clientX, y: e.clientY };
+            this.render();
+            this.updateInfo();
+          });
+
+          this.canvas.addEventListener("mouseup", () => {
+            this.isDragging = false;
+          });
+
+          this.canvas.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            this.zoom = Math.max(0.1, Math.min(5, this.zoom * zoomFactor));
+            this.render();
+            this.updateInfo();
+          });
+        }
+
+        addElement(element) {
+          this.elements.push(element);
+          this.render();
+          this.updateInfo();
+        }
+
+        clear() {
+          this.elements = [];
+          this.render();
+          this.updateInfo();
+        }
+
+        setZoom(zoom) {
+          this.zoom = Math.max(0.1, Math.min(5, zoom));
+          this.render();
+          this.updateInfo();
+        }
+
+        setPan(x, y) {
+          this.pan = { x, y };
+          this.render();
+          this.updateInfo();
+        }
+
+        render() {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          this.ctx.save();
+          this.ctx.translate(this.pan.x, this.pan.y);
+          this.ctx.scale(this.zoom, this.zoom);
+
+          // Draw grid
+          this.drawGrid();
+
+          // Draw elements
+          this.elements.forEach((element) => {
+            this.ctx.save();
+            this.ctx.translate(element.x, element.y);
+
+            if (element.type === "pipe") {
+              this.ctx.fillStyle = element.color || "#4CAF50";
+              this.ctx.fillRect(0, 0, element.width, element.height);
+
+              this.ctx.strokeStyle = element.borderColor || "#2E7D32";
+              this.ctx.lineWidth = 2;
+              this.ctx.strokeRect(0, 0, element.width, element.height);
+            }
+
+            this.ctx.restore();
+          });
+
+          this.ctx.restore();
+        }
+
+        drawGrid() {
+          const gridSize = 20;
+          this.ctx.strokeStyle = "#e0e0e0";
+          this.ctx.lineWidth = 1 / this.zoom;
+
+          const startX =
+            Math.floor(-this.pan.x / this.zoom / gridSize) * gridSize;
+          const startY =
+            Math.floor(-this.pan.y / this.zoom / gridSize) * gridSize;
+          const endX = startX + this.canvas.width / this.zoom + gridSize;
+          const endY = startY + this.canvas.height / this.zoom + gridSize;
+
+          this.ctx.beginPath();
+
+          for (let x = startX; x <= endX; x += gridSize) {
+            this.ctx.moveTo(x, startY);
+            this.ctx.lineTo(x, endY);
+          }
+
+          for (let y = startY; y <= endY; y += gridSize) {
+            this.ctx.moveTo(startX, y);
+            this.ctx.lineTo(endX, y);
+          }
+
+          this.ctx.stroke();
+        }
+
+        updateInfo() {
+          document.getElementById("element-count").textContent =
+            this.elements.length;
+          document.getElementById("zoom-level").textContent =
+            Math.round(this.zoom * 100) + "%";
+          document.getElementById("pan-position").textContent =
+            Math.round(this.pan.x) + ", " + Math.round(this.pan.y);
+        }
+      }
+
+      // Initialize canvas
+      const canvas = document.getElementById("scada-canvas");
+      const canvasManager = new SimpleCanvasManager(canvas);
+
+      // Global functions for buttons
+      window.addPipe = () => {
+        const x = Math.random() * 400 + 100;
+        const y = Math.random() * 300 + 100;
+        canvasManager.addElement({
+          type: "pipe",
+          x: x,
+          y: y,
+          width: 120,
+          height: 20,
+          color: "#4CAF50",
+          borderColor: "#2E7D32",
+        });
+      };
+
+      window.addVerticalPipe = () => {
+        const x = Math.random() * 400 + 100;
+        const y = Math.random() * 300 + 100;
+        canvasManager.addElement({
+          type: "pipe",
+          x: x,
+          y: y,
+          width: 20,
+          height: 120,
+          color: "#2196F3",
+          borderColor: "#1976D2",
+        });
+      };
+
+      window.clearCanvas = () => {
+        canvasManager.clear();
+      };
+
+      window.zoomIn = () => {
+        canvasManager.setZoom(canvasManager.zoom * 1.2);
+      };
+
+      window.zoomOut = () => {
+        canvasManager.setZoom(canvasManager.zoom * 0.8);
+      };
+
+      window.resetView = () => {
+        canvasManager.setZoom(1);
+        canvasManager.setPan(0, 0);
+      };
+
+      // Initialize info display
+      canvasManager.updateInfo();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCADA Canvas Library - Element Library Example</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+
+        .toolbar {
+            width: 200px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .toolbar h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+
+        .element-group {
+            margin-bottom: 20px;
+        }
+
+        .element-group h4 {
+            margin: 0 0 10px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .element-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .element-btn:hover {
+            background: #e9ecef;
+            border-color: #007bff;
+        }
+
+        .element-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .tools {
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .tool-btn {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: #5a6268;
+        }
+
+        .tool-btn.active {
+            background: #28a745;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .canvas-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .control-btn {
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .control-btn:hover {
+            background: white;
+        }
+
+        .properties-panel {
+            width: 250px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+
+        .properties-panel h3 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 10px;
+        }
+
+        .property-group {
+            margin-bottom: 15px;
+        }
+
+        .property-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .property-group input, .property-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .mouse-instructions {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .mouse-instructions h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+
+        .mouse-instructions ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .mouse-instructions li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <h3>Elements</h3>
+            
+            <div class="element-group">
+                <h4>Flow Elements</h4>
+                <button class="element-btn" data-type="pipe">📏 Pipe</button>
+                <button class="element-btn" data-type="pump">⚡ Pump</button>
+                <button class="element-btn" data-type="valve">🔧 Valve</button>
+                <button class="element-btn" data-type="tank">🛢️ Tank</button>
+            </div>
+
+            <div class="tools">
+                <button class="tool-btn active" data-mode="select">👆 Select</button>
+                <button class="tool-btn" data-mode="delete">🗑️ Delete</button>
+            </div>
+
+            <div class="mouse-instructions">
+                <h4>Mouse Controls:</h4>
+                <ul>
+                    <li><strong>Click:</strong> Select element</li>
+                    <li><strong>Drag:</strong> Move element</li>
+                    <li><strong>Wheel:</strong> Zoom in/out</li>
+                    <li><strong>Drag empty:</strong> Pan canvas</li>
+                    <li><strong>Delete key:</strong> Remove selected</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="canvas-container" id="canvas-container">
+            <div class="canvas-controls">
+                <button class="control-btn" id="zoom-in">🔍+</button>
+                <button class="control-btn" id="zoom-out">🔍-</button>
+                <button class="control-btn" id="reset-view">🎯</button>
+                <button class="control-btn" id="toggle-grid">⊞</button>
+                <button class="control-btn" id="snap-grid">📐</button>
+            </div>
+        </div>
+
+        <div class="properties-panel">
+            <h3>Properties</h3>
+            <div id="properties-content">
+                <p>Select an element to edit its properties</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { CanvasManager, PipeElement, screenToCanvas, generateId } from '../../dist/index.es.js';
+
+        class ScadaApp {
+            constructor() {
+                // Get the container div (not a canvas element)
+                this.canvasContainer = document.getElementById('canvas-container');
+                
+                // Let CanvasManager create its own canvas element
+                this.canvasManager = new CanvasManager({
+                    container: this.canvasContainer,
+                    width: 800,
+                    height: 600,
+                    backgroundColor: '#ffffff',
+                    grid: {
+                        enabled: true,
+                        size: 20,
+                        visible: true,
+                        snapToGrid: false
+                    }
+                });
+
+                // Get the canvas that CanvasManager created
+                this.canvas = this.canvasManager.getCanvas();
+
+                this.selectedElementType = null;
+                this.mode = 'select';
+                this.setupEventListeners();
+                
+                // Add some test elements
+                this.addTestElements();
+            }
+
+            addTestElements() {
+                // Add a few test elements to verify interaction works
+                this.canvasManager.addElement({
+                    type: 'pump',
+                    position: { x: 100, y: 100 },
+                    size: { width: 60, height: 60 },
+                    properties: { color: '#2196F3', flowRate: 100, pressure: 50 }
+                });
+
+                this.canvasManager.addElement({
+                    type: 'pipe',
+                    position: { x: 200, y: 150 },
+                    size: { width: 100, height: 20 },
+                    properties: { color: '#4CAF50', diameter: 10 }
+                });
+
+                this.canvasManager.addElement({
+                    type: 'valve',
+                    position: { x: 350, y: 120 },
+                    size: { width: 40, height: 40 },
+                    properties: { color: '#FF9800', state: 'closed' }
+                });
+            }
+
+            setupEventListeners() {
+                // Element creation buttons
+                document.querySelectorAll('.element-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        // Clear previous selection
+                        document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        
+                        this.selectedElementType = e.target.dataset.type;
+                        this.mode = 'create';
+                        this.updateToolbar();
+                    });
+                });
+
+                // Tool buttons
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        
+                        this.mode = e.target.dataset.mode;
+                        this.selectedElementType = null;
+                        
+                        // Clear element selection
+                        document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('active'));
+                        this.updateToolbar();
+                    });
+                });
+
+                // Canvas controls
+                document.getElementById('zoom-in').addEventListener('click', () => {
+                    this.canvasManager.zoomIn();
+                });
+
+                document.getElementById('zoom-out').addEventListener('click', () => {
+                    this.canvasManager.zoomOut();
+                });
+
+                document.getElementById('reset-view').addEventListener('click', () => {
+                    this.canvasManager.resetView();
+                });
+
+                document.getElementById('toggle-grid').addEventListener('click', (e) => {
+                    const currentSettings = this.canvasManager.getGridSettings();
+                    this.canvasManager.setGridSettings({ visible: !currentSettings.visible });
+                });
+
+                document.getElementById('snap-grid').addEventListener('click', (e) => {
+                    const currentSettings = this.canvasManager.getGridSettings();
+                    this.canvasManager.setGridSettings({ snapToGrid: !currentSettings.snapToGrid });
+                });
+
+                // Listen to CanvasManager's selection events
+                this.canvasManager.on("selection-changed", (data) => {
+                    console.log("Selection changed:", data);
+                    if (data.selectedElements && data.selectedElements.length > 0) {
+                        const elementId = data.selectedElements[0];
+                        const element = this.canvasManager.getElement(elementId);
+                        this.updatePropertiesPanel(element);
+                    } else {
+                        this.updatePropertiesPanel(null);
+                    }
+                });
+
+                // Handle element creation when in create mode
+                this.canvas.addEventListener("click", (e) => {
+                    if (this.mode === "create" && this.selectedElementType) {
+                        this.createElement(e);
+                    }
+                });
+
+                // Listen to other canvas manager events
+                this.canvasManager.on("element-added", (data) => {
+                    console.log("Element added:", data.element);
+                });
+
+                this.canvasManager.on("element-removed", (data) => {
+                    console.log("Element removed:", data.elementId);
+                });
+
+                this.canvasManager.on("element-updated", (data) => {
+                    console.log("Element updated:", data.element);
+                });
+
+                this.canvasManager.on("element-drag-start", (data) => {
+                    console.log("Drag start:", data);
+                });
+
+                this.canvasManager.on("element-drag-update", (data) => {
+                    console.log("Drag update:", data);
+                    // Update properties panel if the dragged element is selected
+                    const element = this.canvasManager.getElement(data.elementId);
+                    if (element && this.canvasManager.getSelectedElements().includes(data.elementId)) {
+                        this.updatePropertiesPanel(element);
+                    }
+                });
+
+                this.canvasManager.on("element-drag-end", (data) => {
+                    console.log("Drag end:", data);
+                });
+            }
+
+            createElement(event) {
+                try {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const screenPos = {
+                        x: event.clientX - rect.left,
+                        y: event.clientY - rect.top
+                    };
+
+                    // Convert screen coordinates to canvas coordinates using CanvasManager's method
+                    const viewport = this.canvasManager.getViewport();
+                    const canvasPos = {
+                        x: (screenPos.x - viewport.pan.x) / viewport.zoom,
+                        y: (screenPos.y - viewport.pan.y) / viewport.zoom
+                    };
+
+                    // Apply grid snapping if enabled
+                    const gridSettings = this.canvasManager.getGridSettings();
+                    let finalPos = canvasPos;
+                    if (gridSettings.snapToGrid) {
+                        const gridSize = gridSettings.size;
+                        finalPos = {
+                            x: Math.round(canvasPos.x / gridSize) * gridSize,
+                            y: Math.round(canvasPos.y / gridSize) * gridSize
+                        };
+                    }
+
+                    // Create element configuration
+                    const elementConfig = {
+                        type: this.selectedElementType,
+                        position: finalPos,
+                        size: { width: 60, height: 40 },
+                        properties: this.getDefaultProperties(this.selectedElementType)
+                    };
+
+                    this.canvasManager.addElement(elementConfig);
+
+                    // Switch back to select mode after creating
+                    this.mode = 'select';
+                    this.selectedElementType = null;
+                    document.querySelectorAll('.element-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelector('[data-mode="select"]').classList.add('active');
+                    this.updateToolbar();
+
+                } catch (error) {
+                    console.error('Error creating element:', error);
+                }
+            }
+
+            updatePropertiesPanel(element) {
+                const propertiesContent = document.getElementById('properties-content');
+                
+                if (!element) {
+                    propertiesContent.innerHTML = '<p>Select an element to edit its properties</p>';
+                    return;
+                }
+
+                let html = `
+                    <div class="property-group">
+                        <label>Type</label>
+                        <input type="text" value="${element.type}" readonly>
+                    </div>
+                    <div class="property-group">
+                        <label>X Position</label>
+                        <input type="number" value="${Math.round(element.position.x)}" 
+                               onchange="app.updateElementProperty('${element.id}', 'position.x', parseFloat(this.value))">
+                    </div>
+                    <div class="property-group">
+                        <label>Y Position</label>
+                        <input type="number" value="${Math.round(element.position.y)}" 
+                               onchange="app.updateElementProperty('${element.id}', 'position.y', parseFloat(this.value))">
+                    </div>
+                    <div class="property-group">
+                        <label>Width</label>
+                        <input type="number" value="${element.size.width}" 
+                               onchange="app.updateElementProperty('${element.id}', 'size.width', parseFloat(this.value))">
+                    </div>
+                    <div class="property-group">
+                        <label>Height</label>
+                        <input type="number" value="${element.size.height}" 
+                               onchange="app.updateElementProperty('${element.id}', 'size.height', parseFloat(this.value))">
+                    </div>
+                `;
+
+                // Add element-specific properties
+                if (element.properties) {
+                    if (element.properties.color) {
+                        html += `
+                            <div class="property-group">
+                                <label>Color</label>
+                                <input type="color" value="${element.properties.color}" 
+                                       onchange="app.updateElementProperty('${element.id}', 'properties.color', this.value)">
+                            </div>
+                        `;
+                    }
+
+                    if (element.type === 'pump') {
+                        html += `
+                            <div class="property-group">
+                                <label>Flow Rate</label>
+                                <input type="number" value="${element.properties.flowRate || 0}" 
+                                       onchange="app.updateElementProperty('${element.id}', 'properties.flowRate', parseFloat(this.value))">
+                            </div>
+                            <div class="property-group">
+                                <label>Pressure</label>
+                                <input type="number" value="${element.properties.pressure || 0}" 
+                                       onchange="app.updateElementProperty('${element.id}', 'properties.pressure', parseFloat(this.value))">
+                            </div>
+                        `;
+                    }
+                }
+
+                propertiesContent.innerHTML = html;
+            }
+
+            updateElementProperty(elementId, propertyPath, value) {
+                const element = this.canvasManager.getElement(elementId);
+                if (!element) return;
+
+                // Handle nested property paths
+                const pathParts = propertyPath.split('.');
+                let target = element;
+                
+                for (let i = 0; i < pathParts.length - 1; i++) {
+                    if (!target[pathParts[i]]) {
+                        target[pathParts[i]] = {};
+                    }
+                    target = target[pathParts[i]];
+                }
+                
+                target[pathParts[pathParts.length - 1]] = value;
+                
+                this.canvasManager.updateElement(elementId, element);
+            }
+
+            getDefaultProperties(type) {
+                switch (type) {
+                    case 'pipe':
+                        return { color: '#4CAF50', diameter: 10 };
+                    case 'pump':
+                        return { color: '#2196F3', flowRate: 100, pressure: 50 };
+                    case 'valve':
+                        return { color: '#FF9800', state: 'closed' };
+                    case 'tank':
+                        return { color: '#45b7d1', capacity: 1000, level: 50 };
+                    default:
+                        return { color: '#cccccc' };
+                }
+            }
+
+            updateToolbar() {
+                // Update visual feedback for current mode
+                console.log(`Mode: ${this.mode}, Selected Type: ${this.selectedElementType}`);
+            }
+        }
+
+        // Initialize the application
+        window.app = new ScadaApp();
+    </script>
+</body>
+</html>

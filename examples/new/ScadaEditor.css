@@ -1,0 +1,475 @@
+/* .scada-editor {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.scada-toolbar {
+  background: linear-gradient(to bottom, #f8f9fa, #e9ecef);
+  border-bottom: 1px solid #dee2e6;
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.scada-toolbar button {
+  padding: 8px 16px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scada-toolbar button:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.scada-toolbar button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.scada-status-bar {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #6c757d;
+} */
+
+/* Base styles */
+.scada-editor {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f8f9fa;
+}
+
+/* Toolbar styles */
+.scada-toolbar {
+  background: linear-gradient(to bottom, #ffffff, #f8f9fa);
+  border-bottom: 1px solid #dee2e6;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.button-group {
+  display: flex;
+  gap: 4px;
+}
+
+.toolbar-button {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.toolbar-button:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #adb5bd;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.toolbar-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8f9fa;
+}
+
+.toolbar-button.delete-button:not(:disabled) {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+.toolbar-button.delete-button:hover:not(:disabled) {
+  background: #dc3545;
+  color: white;
+}
+
+.button-icon {
+  font-size: 14px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 32px;
+  background: #dee2e6;
+  margin: 0 4px;
+}
+
+.zoom-indicator {
+  padding: 4px 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #495057;
+  min-width: 50px;
+  text-align: center;
+}
+
+.toolbar-status {
+  margin-left: auto;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+/* Editor content layout */
+.editor-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.element-library-panel {
+  width: 280px;
+  background: white;
+  border-right: 1px solid #dee2e6;
+  overflow-y: auto;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.canvas-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background: #f8f9fa;
+}
+
+/* SVG Element Library styles */
+.svg-element-library {
+  padding: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.library-header {
+  margin-bottom: 16px;
+}
+
+.library-header h3 {
+  margin: 0 0 12px 0;
+  color: #212529;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.search-input,
+.category-select {
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.search-input:focus,
+.category-select:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.element-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.element-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+  position: relative;
+}
+
+.element-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.element-card:active {
+  transform: translateY(0);
+}
+
+.element-card.loading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.element-preview {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  border-radius: 4px;
+  background: #f8f9fa;
+}
+
+.element-loading {
+  font-size: 10px;
+  color: #6c757d;
+  text-align: center;
+}
+
+.element-info {
+  text-align: center;
+  width: 100%;
+}
+
+.element-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #212529;
+  margin-bottom: 2px;
+  line-height: 1.2;
+}
+
+.element-category {
+  font-size: 9px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 4px;
+}
+
+.element-tags {
+  font-size: 8px;
+  color: #868e96;
+  line-height: 1.1;
+}
+
+.no-results {
+  text-align: center;
+  color: #6c757d;
+  padding: 32px 16px;
+  font-style: italic;
+}
+
+.clear-search-btn {
+  margin-top: 8px;
+  padding: 4px 12px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.element-count {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e9ecef;
+  font-size: 11px;
+  color: #6c757d;
+  text-align: center;
+}
+
+.loading-indicator {
+  text-align: center;
+  padding: 20px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Status bar styles */
+.scada-status-bar {
+  background: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #6c757d;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.status-left {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.status-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.status-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.status-button {
+  padding: 4px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.status-button:hover:not(:disabled) {
+  background: #e9ecef;
+}
+
+.status-button.primary {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.status-button.primary:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.status-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dirty-indicator {
+  color: #ffc107;
+  font-weight: bold;
+  margin-left: 4px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .scada-toolbar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+
+  .toolbar-button {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .element-library-panel {
+    width: 240px;
+  }
+
+  .canvas-container {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .editor-content {
+    flex-direction: column;
+  }
+
+  .element-library-panel {
+    width: 100%;
+    height: 200px;
+    border-right: none;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  .element-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 6px;
+  }
+}
+
+/* Accessibility improvements */
+.element-card:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.toolbar-button:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+/* Animation for smooth transitions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.element-card {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Print styles */
+@media print {
+  .scada-toolbar,
+  .element-library-panel,
+  .scada-status-bar {
+    display: none;
+  }
+
+  .editor-content {
+    flex-direction: column;
+  }
+
+  .canvas-container {
+    padding: 0;
+  }
+}

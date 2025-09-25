@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Enhanced SVG Element Drawing</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      .container {
+        display: flex;
+        gap: 20px;
+        height: calc(100vh - 40px);
+      }
+      .controls {
+        width: 250px;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+      }
+      .canvas-area {
+        flex: 1;
+        background: white;
+        border-radius: 8px;
+      }
+      #canvas-container {
+        width: 100%;
+        height: 100%;
+      }
+      .element-btn {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        background: #f0f0f0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      .element-btn:hover {
+        background: #e0e0e0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="controls">
+        <h3>SVG Elements</h3>
+        <button class="element-btn" onclick="addElement('horizontal-pipe')">
+          Horizontal Pipe
+        </button>
+        <button class="element-btn" onclick="addElement('vertical-pipe')">
+          Vertical Pipe
+        </button>
+        <button class="element-btn" onclick="addElement('centrifugal-pump')">
+          Centrifugal Pump
+        </button>
+        <button class="element-btn" onclick="addElement('ball-valve')">
+          Ball Valve
+        </button>
+        <button class="element-btn" onclick="addElement('storage-tank')">
+          Storage Tank
+        </button>
+        <button class="element-btn" onclick="addElement('pressure-gauge')">
+          Pressure Gauge
+        </button>
+
+        <h4>Controls</h4>
+        <button class="element-btn" onclick="clearCanvas()">
+          Clear Canvas
+        </button>
+        <button class="element-btn" onclick="toggleAnimation()">
+          Toggle Animation
+        </button>
+      </div>
+
+      <div class="canvas-area">
+        <div id="canvas-container"></div>
+      </div>
+    </div>
+
+    <script src="../../dist/index.umd.js"></script>
+
+    <script type="module">
+      const { CanvasManager, getSvgElementById } = ScadaCanvas;
+
+      class EnhancedSvgApp {
+        constructor() {
+          this.initializeCanvas();
+          this.animationEnabled = false;
+        }
+
+        initializeCanvas() {
+          const container = document.getElementById("canvas-container");
+          this.canvasManager = new CanvasManager({
+            container: container,
+            width: 800,
+            height: 600,
+            backgroundColor: "#f8f9fa",
+            grid: {
+              enabled: true,
+              size: 20,
+              visible: true,
+              snapToGrid: true,
+            },
+            interaction: {
+              elementDragThreshold: 1, // Very sensitive - start drag after 1px movement
+              canvasDragThreshold: 2, // Start canvas pan after 2px movement
+            },
+          });
+
+          // Listen for canvas clicks to add elements
+          this.canvasManager.on("canvas-clicked", (data) => {
+            if (this.selectedElementType) {
+              this.addElementAt(this.selectedElementType, data.position);
+            }
+          });
+        }
+
+        addElement(svgElementId) {
+          // Add element at center of canvas
+          const viewport = this.canvasManager.getViewport();
+          const centerX = viewport.bounds.width / 2;
+          const centerY = viewport.bounds.height / 2;
+
+          this.addElementAt(svgElementId, { x: centerX, y: centerY });
+        }
+
+        addElementAt(svgElementId, position) {
+          const svgDefinition = getSvgElementById(svgElementId);
+          if (!svgDefinition) {
+            console.warn(`SVG element not found: ${svgElementId}`);
+            return;
+          }
+
+          // Create element with enhanced properties
+          const elementId = this.canvasManager.addElementFromSvg(
+            svgElementId,
+            position,
+            svgDefinition.defaultSize
+          );
+
+          if (elementId) {
+            // Add some dynamic properties for demonstration
+            const element = this.canvasManager.getElement(elementId);
+            if (element) {
+              // Add status for interactive elements
+              if (svgElementId.includes("pump")) {
+                element.properties.status = "running";
+                element.properties.flowRate = Math.random() * 100;
+              } else if (svgElementId.includes("valve")) {
+                element.properties.status =
+                  Math.random() > 0.5 ? "open" : "closed";
+                element.properties.position = Math.random() * 100;
+              } else if (svgElementId.includes("tank")) {
+                element.properties.level = Math.random() * 100;
+              }
+
+              this.canvasManager.updateElement(elementId, element);
+            }
+          }
+        }
+
+        clearCanvas() {
+          const elements = this.canvasManager.getAllElements();
+          elements.forEach((element) => {
+            this.canvasManager.removeElement(element.id);
+          });
+        }
+
+        toggleAnimation() {
+          this.animationEnabled = !this.animationEnabled;
+
+          if (this.animationEnabled) {
+            this.startAnimation();
+          } else {
+            this.stopAnimation();
+          }
+        }
+
+        startAnimation() {
+          this.animationInterval = setInterval(() => {
+            const elements = this.canvasManager.getAllElements();
+
+            elements.forEach((element) => {
+              let updated = false;
+
+              // Animate pump flow rates
+              if (
+                element.type === "pump" &&
+                element.properties.status === "running"
+              ) {
+                element.properties.flowRate =
+                  50 + Math.sin(Date.now() / 1000) * 30;
+                updated = true;
+              }
+
+              // Animate tank levels
+              if (element.properties.level !== undefined) {
+                element.properties.level =
+                  50 + Math.sin(Date.now() / 2000) * 40;
+                updated = true;
+              }
+
+              // Animate valve positions
+              if (
+                element.type === "valve" &&
+                element.properties.status === "partial"
+              ) {
+                element.properties.position =
+                  50 + Math.sin(Date.now() / 1500) * 30;
+                updated = true;
+              }
+
+              if (updated) {
+                this.canvasManager.updateElement(element.id, element);
+              }
+            });
+          }, 100);
+        }
+
+        stopAnimation() {
+          if (this.animationInterval) {
+            clearInterval(this.animationInterval);
+            this.animationInterval = null;
+          }
+        }
+      }
+
+      // Global functions
+      window.addElement = function (svgElementId) {
+        app.addElement(svgElementId);
+      };
+
+      window.clearCanvas = function () {
+        app.clearCanvas();
+      };
+
+      window.toggleAnimation = function () {
+        app.toggleAnimation();
+      };
+
+      // Initialize the application
+      window.app = new EnhancedSvgApp();
+    </script>
+  </body>
+</html>

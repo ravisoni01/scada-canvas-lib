@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCADA Canvas Debug</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #canvas-container {
+            border: 2px solid #ddd;
+            width: 800px;
+            height: 600px;
+            background: white;
+        }
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SCADA Canvas Debug</h1>
+    <div id="canvas-container"></div>
+    
+    <div class="debug-info">
+        <h3>Debug Information:</h3>
+        <div id="debug-output"></div>
+    </div>
+
+    <button onclick="testAddElement()">Test Add Element</button>
+    <button onclick="testGetElements()">Test Get Elements</button>
+
+    <script type="module">
+        let canvasManager;
+        const debugOutput = document.getElementById('debug-output');
+        
+        function log(message) {
+            console.log(message);
+            debugOutput.innerHTML += `<p>${message}</p>`;
+        }
+
+        try {
+            log('Starting import test...');
+            
+            // Test import
+            const module = await import('../../dist/index.es.js');
+            log(`Import successful. Available exports: ${Object.keys(module).join(', ')}`);
+            
+            const { CanvasManager, ElementFactory } = module;
+            log(`CanvasManager: ${typeof CanvasManager}`);
+            log(`ElementFactory: ${typeof ElementFactory}`);
+            
+            // Test CanvasManager initialization
+            const container = document.getElementById('canvas-container');
+            log(`Container found: ${!!container}`);
+            
+            canvasManager = new CanvasManager({
+                container: container,
+                width: 800,
+                height: 600,
+                backgroundColor: '#ffffff',
+                grid: {
+                    enabled: true,
+                    size: 20,
+                    visible: true,
+                    snapToGrid: false
+                }
+            });
+            
+            log('CanvasManager created successfully');
+            
+            // Test canvas creation
+            const canvas = canvasManager.getCanvas();
+            log(`Canvas created: ${!!canvas}`);
+            log(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
+            
+            // Test adding an element
+            const elementId = canvasManager.addElement({
+                type: 'pipe',
+                position: { x: 100, y: 100 },
+                size: { width: 120, height: 20 },
+                properties: {
+                    color: '#4CAF50',
+                    borderColor: '#2E7D32'
+                }
+            });
+            
+            log(`Element added with ID: ${elementId}`);
+            
+            // Test getting elements
+            const elements = canvasManager.getAllElements();
+            log(`Total elements: ${elements.length}`);
+            
+            // Make functions global for button testing
+            window.testAddElement = () => {
+                try {
+                    const id = canvasManager.addElement({
+                        type: 'pump',
+                        position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
+                        size: { width: 60, height: 60 },
+                        properties: {
+                            color: '#FF9800',
+                            borderColor: '#F57C00'
+                        }
+                    });
+                    log(`Added pump element: ${id}`);
+                } catch (error) {
+                    log(`Error adding element: ${error.message}`);
+                }
+            };
+            
+            window.testGetElements = () => {
+                try {
+                    const elements = canvasManager.getAllElements();
+                    log(`Current elements: ${elements.length}`);
+                    elements.forEach(el => {
+                        log(`- ${el.type} at (${el.position.x}, ${el.position.y})`);
+                    });
+                } catch (error) {
+                    log(`Error getting elements: ${error.message}`);
+                }
+            };
+            
+        } catch (error) {
+            log(`Error: ${error.message}`);
+            log(`Stack: ${error.stack}`);
+        }
+    </script>
+</body>
+</html>
