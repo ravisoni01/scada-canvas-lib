@@ -1,3 +1,5 @@
+import { ElementType } from "../elements/ElementFactory";
+
 /**
  * Basic geometric types
  */
@@ -96,7 +98,7 @@ export interface CanvasConfig {
  * Element creation configuration
  */
 export interface ElementConfig {
-  type: string;
+  type: ElementType;
   position: Point;
   size?: Size;
   properties?: Record<string, any>;

@@ -22,6 +22,22 @@ export interface ValveProperties {
   status?: "open" | "closed" | "partial";
 }
 
+export interface TextProperties {
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: "normal" | "bold" | "lighter" | "bolder";
+  fontStyle?: "normal" | "italic" | "oblique";
+  color?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  textAlign?: "left" | "center" | "right";
+  verticalAlign?: "top" | "middle" | "bottom";
+  padding?: number;
+  editable?: boolean;
+}
+
 export class PumpElement {
   public readonly id: string;
   public readonly type = "pump";
@@ -237,8 +253,191 @@ export class ValveElement {
   }
 }
 
-export type ElementType = "pipe" | "pump" | "valve";
-export type ElementInstance = PipeElement | PumpElement | ValveElement;
+export class TextElement {
+  public readonly id: string;
+  public readonly type = "text";
+  public position: Point;
+  public size: Size;
+  public properties: TextProperties;
+  public connections: string[] = [];
+  public zIndex: number = 0;
+  public visible: boolean = true;
+  public locked: boolean = false;
+
+  constructor(
+    position: Point,
+    size: Size = { width: 120, height: 30 },
+    properties: TextProperties = {}
+  ) {
+    this.id = generateId();
+    this.position = { ...position };
+    this.size = { ...size };
+    this.properties = {
+      text: "Text",
+      fontSize: 14,
+      fontFamily: "Arial, sans-serif",
+      fontWeight: "normal",
+      fontStyle: "normal",
+      color: "#000000",
+      backgroundColor: "transparent",
+      borderColor: "#cccccc",
+      borderWidth: 1,
+      textAlign: "left",
+      verticalAlign: "middle",
+      padding: 4,
+      editable: true,
+      ...properties,
+    };
+  }
+
+  public toScadaElement(): ScadaElement {
+    return {
+      id: this.id,
+      type: this.type,
+      position: this.position,
+      size: this.size,
+      properties: this.properties,
+      connections: this.connections,
+      zIndex: this.zIndex,
+      visible: this.visible,
+      locked: this.locked,
+    };
+  }
+
+  public render(ctx: CanvasRenderingContext2D): void {
+    const { x, y } = this.position;
+    const { width, height } = this.size;
+    const props = this.properties;
+
+    ctx.save();
+
+    // Draw background if specified
+    if (props.backgroundColor && props.backgroundColor !== "transparent") {
+      ctx.fillStyle = props.backgroundColor;
+      ctx.fillRect(x, y, width, height);
+    }
+
+    // Draw border
+    if (props.borderWidth && props.borderWidth > 0) {
+      ctx.strokeStyle = props.borderColor!;
+      ctx.lineWidth = props.borderWidth;
+      ctx.strokeRect(x, y, width, height);
+    }
+
+    // Set up text properties
+    const fontSize = props.fontSize!;
+    const fontFamily = props.fontFamily!;
+    const fontWeight = props.fontWeight!;
+    const fontStyle = props.fontStyle!;
+    
+    ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = props.color!;
+    ctx.textBaseline = "top";
+
+    // Calculate text position based on alignment
+    const padding = props.padding!;
+    const textX = this.getTextX(x, width, padding, props.textAlign!);
+    const textY = this.getTextY(y, height, padding, fontSize, props.verticalAlign!);
+
+    // Handle text wrapping and rendering
+    const text = props.text || "";
+    const maxWidth = width - (padding * 2);
+    
+    if (maxWidth > 0) {
+      this.renderWrappedText(ctx, text, textX, textY, maxWidth, fontSize);
+    }
+
+    ctx.restore();
+  }
+
+  private getTextX(x: number, width: number, padding: number, align: string): number {
+    switch (align) {
+      case "center":
+        return x + width / 2;
+      case "right":
+        return x + width - padding;
+      default: // "left"
+        return x + padding;
+    }
+  }
+
+  private getTextY(x: number, height: number, padding: number, fontSize: number, vAlign: string): number {
+    switch (vAlign) {
+      case "middle":
+        return x + (height - fontSize) / 2;
+      case "bottom":
+        return x + height - fontSize - padding;
+      default: // "top"
+        return x + padding;
+    }
+  }
+
+  private renderWrappedText(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    lineHeight: number
+  ): void {
+    const words = text.split(' ');
+    let line = '';
+    let currentY = y;
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + ' ';
+      const metrics = ctx.measureText(testLine);
+      const testWidth = metrics.width;
+
+      if (testWidth > maxWidth && i > 0) {
+        // Draw the current line
+        this.drawTextLine(ctx, line.trim(), x, currentY);
+        line = words[i] + ' ';
+        currentY += lineHeight + 2; // Add small line spacing
+      } else {
+        line = testLine;
+      }
+    }
+
+    // Draw the last line
+    if (line.trim()) {
+      this.drawTextLine(ctx, line.trim(), x, currentY);
+    }
+  }
+
+  private drawTextLine(ctx: CanvasRenderingContext2D, text: string, x: number, y: number): void {
+    const align = this.properties.textAlign!;
+    
+    if (align === "center") {
+      ctx.textAlign = "center";
+    } else if (align === "right") {
+      ctx.textAlign = "right";
+    } else {
+      ctx.textAlign = "left";
+    }
+    
+    ctx.fillText(text, x, y);
+  }
+
+  public updatePosition(position: Point): void {
+    this.position = { ...position };
+  }
+
+  public updateSize(size: Size): void {
+    this.size = { ...size };
+  }
+
+  public updateProperties(properties: Partial<TextProperties>): void {
+    this.properties = { ...this.properties, ...properties };
+  }
+
+  public clone(): TextElement {
+    return new TextElement(this.position, this.size, { ...this.properties });
+  }
+}
+
+export type ElementType = "pipe" | "pump" | "valve" | "text";
+export type ElementInstance = PipeElement | PumpElement | ValveElement | TextElement;
 
 export class ElementFactory {
   public static createElement(
@@ -254,6 +453,8 @@ export class ElementFactory {
         return new PumpElement(position, size, properties);
       case "valve":
         return new ValveElement(position, size, properties);
+      case "text":
+        return new TextElement(position, size, properties);
       default:
         throw new Error(`Unknown element type: ${type}`);
     }
@@ -267,6 +468,8 @@ export class ElementFactory {
         return { width: 60, height: 60 };
       case "valve":
         return { width: 40, height: 40 };
+      case "text":
+        return { width: 120, height: 30 };
       default:
         return { width: 50, height: 50 };
     }
@@ -294,6 +497,13 @@ export class ElementFactory {
           minHeight: 20,
           aspectRatio: 1,
           lockAspectRatio: true,
+        };
+      case "text":
+        return {
+          minWidth: 20,
+          minHeight: 15,
+          aspectRatio: undefined,
+          lockAspectRatio: false,
         };
       default:
         return {

@@ -1,8 +1,15 @@
 import React, { useRef, useState, useCallback } from "react";
 import ScadaCanvas, { ScadaCanvasRef } from "./ScadaCanvas";
 import ScadaToolbar from "./ScadaToolbar";
-import { ScadaElement, ElementType, ElementConfig } from "scada-canvas-lib";
 import SvgElementLibrary from "./SvgElementLibrary";
+import TextPropertiesPanel from "./TextPropertiesPanel";
+import {
+  ScadaElement,
+  ElementType,
+  ElementConfig,
+  SvgElementDefinition,
+  TextProperties,
+} from "scada-canvas-lib";
 
 interface ScadaEditorProps {
   width?: number;
@@ -19,8 +26,11 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
 }) => {
   const canvasRef = useRef<ScadaCanvasRef>(null);
   const [selectedCount, setSelectedCount] = useState(0);
+  const [selectedElement, setSelectedElement] = useState<ScadaElement | null>(null);
   const [elements, setElements] = useState<ScadaElement[]>([]);
   const [zoom, setZoom] = useState(1);
+  const [showElementLibrary, setShowElementLibrary] = useState(true);
+  const [showPropertiesPanel, setShowPropertiesPanel] = useState(true);
 
   // Handle element addition
   const handleAddElement = useCallback(
@@ -35,7 +45,25 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
             ? { width: 100, height: 20 }
             : type === "pump"
               ? { width: 60, height: 60 }
-              : { width: 40, height: 40 },
+              : type === "text"
+                ? { width: 120, height: 30 }
+                : { width: 40, height: 40 },
+        // Add default properties for text elements
+        properties: type === "text" ? {
+          text: "Text",
+          fontSize: 14,
+          fontFamily: "Arial, sans-serif",
+          fontWeight: "normal",
+          fontStyle: "normal",
+          color: "#000000",
+          backgroundColor: "transparent",
+          borderColor: "#cccccc",
+          borderWidth: 1,
+          textAlign: "left",
+          verticalAlign: "middle",
+          padding: 4,
+          editable: true,
+        } : undefined,
       };
 
       canvasRef.current.addElement(config);
@@ -43,9 +71,47 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
     []
   );
 
+  // Handle SVG element selection
+  const handleSvgElementSelect = useCallback(
+    (svgElement: SvgElementDefinition) => {
+      if (!canvasRef.current) return;
+
+      // Add SVG element to canvas at a default position
+      const position = {
+        x: 200 + Math.random() * 200,
+        y: 150 + Math.random() * 200,
+      };
+      canvasRef.current.addElementFromSvg(
+        svgElement.id,
+        position,
+        svgElement.defaultSize
+      );
+    },
+    []
+  );
+
   // Handle selection changes
   const handleSelectionChanged = useCallback((selectedIds: string[]) => {
     setSelectedCount(selectedIds.length);
+    
+    // Get the selected element for properties panel
+    if (selectedIds.length === 1 && canvasRef.current) {
+      const element = canvasRef.current.getElement(selectedIds[0]);
+      setSelectedElement(element || null);
+    } else {
+      setSelectedElement(null);
+    }
+  }, []);
+
+  // Handle text properties update
+  const handleUpdateTextProperties = useCallback((elementId: string, properties: Partial<TextProperties>) => {
+    if (!canvasRef.current) return;
+    
+    const updates = {
+      properties: properties,
+    };
+    
+    canvasRef.current.updateElement(elementId, updates);
   }, []);
 
   // Handle element updates
@@ -112,6 +178,8 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
         border: "1px solid #ddd",
         borderRadius: "8px",
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <ScadaToolbar
@@ -122,20 +190,68 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
         selectedCount={selectedCount}
+        onToggleElementLibrary={() =>
+          setShowElementLibrary(!showElementLibrary)
+        }
+        showElementLibrary={showElementLibrary}
+        onTogglePropertiesPanel={() =>
+          setShowPropertiesPanel(!showPropertiesPanel)
+        }
+        showPropertiesPanel={showPropertiesPanel}
       />
 
-      <ScadaCanvas
-        ref={canvasRef}
-        width={width}
-        height={height}
-        gridEnabled={true}
-        gridSize={20}
-        snapToGrid={true}
-        onElementAdded={handleElementAdded}
-        onElementRemoved={handleElementRemoved}
-        onSelectionChanged={handleSelectionChanged}
-        onElementUpdated={handleElementUpdated}
-      />
+      <div style={{ display: "flex", flex: 1 }}>
+        {/* Element Library Sidebar */}
+        {showElementLibrary && (
+          <div
+            style={{
+              width: "250px",
+              borderRight: "1px solid #ddd",
+              backgroundColor: "#f9f9f9",
+              padding: "12px",
+              overflowY: "auto",
+            }}
+          >
+            <SvgElementLibrary onElementSelect={handleSvgElementSelect} />
+          </div>
+        )}
+
+        {/* Canvas Area */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+          <ScadaCanvas
+            ref={canvasRef}
+            width={
+              (showElementLibrary ? width - 250 : width) - 
+              (showPropertiesPanel ? 280 : 0)
+            }
+            height={height}
+            gridEnabled={true}
+            gridSize={20}
+            snapToGrid={true}
+            onElementAdded={handleElementAdded}
+            onElementRemoved={handleElementRemoved}
+            onSelectionChanged={handleSelectionChanged}
+            onElementUpdated={handleElementUpdated}
+          />
+        </div>
+
+        {/* Properties Panel */}
+        {showPropertiesPanel && (
+          <div
+            style={{
+              width: "280px",
+              borderLeft: "1px solid #ddd",
+              backgroundColor: "#f9f9f9",
+              overflowY: "auto",
+            }}
+          >
+            <TextPropertiesPanel
+              selectedElement={selectedElement}
+              onUpdateElement={handleUpdateTextProperties}
+            />
+          </div>
+        )}
+      </div>
 
       <div
         style={{

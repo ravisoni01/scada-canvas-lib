@@ -12,6 +12,7 @@ import {
 import { generateId } from "../utils";
 import { InteractionManager } from "../interactions/InteractionManager";
 import { ElementRegistry } from "../elements/ElementRegistry";
+import { ElementFactory } from "../elements/ElementFactory";
 import { SVG_ELEMENTS, SvgElementDefinition } from "../assets/svgElements";
 
 export class CanvasManager extends EventEmitter {
@@ -468,6 +469,9 @@ export class CanvasManager extends EventEmitter {
         case "valve":
           this.drawValve(element);
           break;
+        case "text":
+          this.drawText(element);
+          break;
         default:
           this.drawDefaultElement(element);
       }
@@ -823,21 +827,30 @@ export class CanvasManager extends EventEmitter {
   // Public API methods
   public addElement(config: ElementConfig): string {
     // Validate element type
-    const validTypes = ["pipe", "pump", "valve"];
+    const validTypes = ["pipe", "pump", "valve", "text"];
     if (!validTypes.includes(config.type)) {
       throw new Error(`Invalid element type: ${config.type}`);
     }
 
+    // Use ElementFactory to create element with proper defaults
+    const factoryElement = ElementFactory.createElement(
+      config.type,
+      config.position,
+      config.size,
+      config.properties
+    );
+
+    // Convert to ScadaElement format
     const element: ScadaElement = {
-      id: generateId(),
-      type: config.type,
-      position: config.position,
-      size: config.size || { width: 100, height: 50 },
-      properties: config.properties || {},
-      connections: [],
+      id: factoryElement.id,
+      type: factoryElement.type,
+      position: factoryElement.position,
+      size: factoryElement.size,
+      properties: factoryElement.properties,
+      connections: factoryElement.connections,
       zIndex: this.state.elements.size,
-      visible: true,
-      locked: false,
+      visible: factoryElement.visible,
+      locked: factoryElement.locked,
     };
 
     this.state.elements.set(element.id, element);
@@ -985,5 +998,132 @@ export class CanvasManager extends EventEmitter {
    */
   public getAvailableSvgElements(): SvgElementDefinition[] {
     return SVG_ELEMENTS;
+  }
+
+  private drawText(element: ScadaElement): void {
+    const { width, height } = element.size;
+    const props = element.properties;
+
+    // Draw background if specified
+    if (props.backgroundColor && props.backgroundColor !== "transparent") {
+      this.ctx.fillStyle = props.backgroundColor;
+      this.ctx.fillRect(0, 0, width, height);
+    }
+
+    // Draw border
+    if (props.borderWidth && props.borderWidth > 0) {
+      this.ctx.strokeStyle = props.borderColor || "#cccccc";
+      this.ctx.lineWidth = props.borderWidth;
+      this.ctx.strokeRect(0, 0, width, height);
+    }
+
+    // Set up text properties
+    const fontSize = props.fontSize || 14;
+    const fontFamily = props.fontFamily || "Arial, sans-serif";
+    const fontWeight = props.fontWeight || "normal";
+    const fontStyle = props.fontStyle || "normal";
+
+    this.ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+    this.ctx.fillStyle = props.color || "#000000";
+    this.ctx.textBaseline = "top";
+
+    // Calculate text position based on alignment
+    const padding = props.padding || 4;
+    const textAlign = props.textAlign || "left";
+    const verticalAlign = props.verticalAlign || "middle";
+
+    const textX = this.getTextX(0, width, padding, textAlign);
+    const textY = this.getTextY(0, height, padding, fontSize, verticalAlign);
+
+    // Handle text wrapping and rendering
+    const text = props.text || "";
+    const maxWidth = width - padding * 2;
+
+    if (maxWidth > 0) {
+      this.renderWrappedText(text, textX, textY, maxWidth, fontSize, textAlign);
+    }
+  }
+
+  private getTextX(
+    x: number,
+    width: number,
+    padding: number,
+    align: string
+  ): number {
+    switch (align) {
+      case "center":
+        return x + width / 2;
+      case "right":
+        return x + width - padding;
+      default: // "left"
+        return x + padding;
+    }
+  }
+
+  private getTextY(
+    x: number,
+    height: number,
+    padding: number,
+    fontSize: number,
+    vAlign: string
+  ): number {
+    switch (vAlign) {
+      case "middle":
+        return x + (height - fontSize) / 2;
+      case "bottom":
+        return x + height - fontSize - padding;
+      default: // "top"
+        return x + padding;
+    }
+  }
+
+  private renderWrappedText(
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    lineHeight: number,
+    textAlign: string
+  ): void {
+    const words = text.split(" ");
+    let line = "";
+    let currentY = y;
+
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + " ";
+      const metrics = this.ctx.measureText(testLine);
+      const testWidth = metrics.width;
+
+      if (testWidth > maxWidth && i > 0) {
+        // Draw the current line
+        this.drawTextLine(line.trim(), x, currentY, textAlign);
+        line = words[i] + " ";
+        currentY += lineHeight + 2; // Add small line spacing
+      } else {
+        line = testLine;
+      }
+    }
+
+    // Draw the last line
+    if (line.trim()) {
+      this.drawTextLine(line.trim(), x, currentY, textAlign);
+    }
+  }
+
+  private drawTextLine(
+    text: string,
+    x: number,
+    y: number,
+    align: string
+  ): void {
+    if (align === "center") {
+      this.ctx.textAlign = "center";
+    } else if (align === "right") {
+      this.ctx.textAlign = "right";
+    } else {
+      this.ctx.textAlign = "left";
+    }
+
+    this.ctx.fillText(text, x, y);
   }
 }

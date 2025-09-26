@@ -1,5 +1,10 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { CanvasManager, ElementConfig, ScadaElement } from "scada-canvas-lib";
+import {
+  CanvasConfig,
+  CanvasManager,
+  ElementConfig,
+  ScadaElement,
+} from "scada-canvas-lib";
 
 export interface ScadaCanvasProps {
   width?: number;
@@ -16,11 +21,18 @@ export interface ScadaCanvasProps {
 
 export interface ScadaCanvasRef {
   addElement: (config: ElementConfig) => string;
+  addElementFromSvg: (
+    svgElementId: string,
+    position: { x: number; y: number },
+    size?: { width: number; height: number }
+  ) => string | null;
   removeElement: (id: string) => boolean;
+  updateElement: (id: string, updates: Partial<ScadaElement>) => boolean;
   selectElement: (id: string) => void;
   clearSelection: () => void;
   getSelectedElements: () => string[];
   getAllElements: () => ScadaElement[];
+  getElement: (id: string) => ScadaElement | undefined;
   setZoom: (zoom: number) => void;
   resetView: () => void;
 }
@@ -59,7 +71,11 @@ const ScadaCanvas = forwardRef<ScadaCanvasRef, ScadaCanvasProps>(
           snapToGrid,
           visible: gridEnabled,
         },
-      });
+        interaction: {
+          elementDragThreshold: 1, // Very sensitive - start drag after 1px movement
+          canvasDragThreshold: 2, // Start canvas pan after 2px movement
+        },
+      } as CanvasConfig);
 
       canvasManagerRef.current = canvasManager;
 
@@ -100,8 +116,24 @@ const ScadaCanvas = forwardRef<ScadaCanvasRef, ScadaCanvasProps>(
       addElement: (config: ElementConfig) => {
         return canvasManagerRef.current?.addElement(config) || "";
       },
+      addElementFromSvg: (
+        svgElementId: string,
+        position: { x: number; y: number },
+        size?: { width: number; height: number }
+      ) => {
+        return (
+          canvasManagerRef.current?.addElementFromSvg(
+            svgElementId,
+            position,
+            size
+          ) || null
+        );
+      },
       removeElement: (id: string) => {
         return canvasManagerRef.current?.removeElement(id) || false;
+      },
+      updateElement: (id: string, updates: Partial<ScadaElement>) => {
+        return canvasManagerRef.current?.updateElement(id, updates) || false;
       },
       selectElement: (id: string) => {
         canvasManagerRef.current?.selectElement(id);
@@ -114,6 +146,9 @@ const ScadaCanvas = forwardRef<ScadaCanvasRef, ScadaCanvasProps>(
       },
       getAllElements: () => {
         return canvasManagerRef.current?.getAllElements() || [];
+      },
+      getElement: (id: string) => {
+        return canvasManagerRef.current?.getElement(id);
       },
       setZoom: (zoom: number) => {
         canvasManagerRef.current?.setZoom(zoom);

@@ -37,12 +37,14 @@ export {
   ElementFactory,
   PumpElement,
   ValveElement,
+  TextElement,
 } from "./elements/ElementFactory";
 export type {
   ElementType,
   ElementInstance,
   PumpProperties,
   ValveProperties,
+  TextProperties,
 } from "./elements/ElementFactory";
 
 // Utilities

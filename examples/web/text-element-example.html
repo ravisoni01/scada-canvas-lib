@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SCADA Canvas - Text Element Example</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .canvas-container {
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        position: relative;
+        width: 1000px;
+        height: 600px;
+      }
+
+      #canvas-container {
+        width: 100%;
+        height: 100%;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .toolbar-group {
+        display: flex;
+        gap: 5px;
+        padding: 10px;
+        background: white;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        background: #4caf50;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+      }
+
+      button:hover {
+        background: #45a049;
+      }
+
+      button.active {
+        background: #2196f3;
+      }
+
+      .properties-panel {
+        background: white;
+        border-radius: 6px;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+      }
+
+      .property-group {
+        margin-bottom: 10px;
+      }
+
+      .property-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .property-group input,
+      .property-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .property-group input[type="color"] {
+        width: 50px;
+        height: 40px;
+        padding: 0;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>SCADA Canvas - Text Element Example</h1>
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button onclick="addTextElement()">Add Text Element</button>
+          <button onclick="addLabelElement()">Add Label</button>
+          <button onclick="addTitleElement()">Add Title</button>
+        </div>
+
+        <div class="toolbar-group">
+          <button onclick="clearCanvas()">Clear All</button>
+          <button onclick="zoomIn()">Zoom In</button>
+          <button onclick="zoomOut()">Zoom Out</button>
+          <button onclick="resetView()">Reset View</button>
+        </div>
+      </div>
+
+      <div class="canvas-container">
+        <div id="canvas-container"></div>
+      </div>
+
+      <div class="properties-panel">
+        <h3>Text Properties</h3>
+        <div id="properties-content">
+          <p>Select a text element to edit its properties</p>
+        </div>
+      </div>
+    </div>
+
+    <script src="../../dist/index.umd.js"></script>
+
+    <script type="module">
+      const { CanvasManager } = ScadaCanvas;
+
+      let canvasManager;
+      let selectedElement = null;
+
+      // Initialize canvas
+      function initCanvas() {
+        const container = document.getElementById("canvas-container");
+
+        canvasManager = new CanvasManager({
+          container: container,
+          width: 1000,
+          height: 600,
+          backgroundColor: "#ffffff",
+          grid: {
+            enabled: true,
+            visible: true,
+            size: 20,
+            snapToGrid: false,
+          },
+        });
+
+        // Listen for element selection
+        canvasManager.on("elementSelected", (element) => {
+          selectedElement = element;
+          updatePropertiesPanel(selectedElement);
+        });
+
+        canvasManager.on("elementDeselected", () => {
+          selectedElement = null;
+          updatePropertiesPanel(null);
+        });
+
+        // Also listen for selection changes to handle multiple selections
+        canvasManager.on("selection-changed", (data) => {
+          if (data.selectedElements && data.selectedElements.length > 0) {
+            const elementId = data.selectedElements[0];
+            const element = canvasManager.getElement(elementId);
+            selectedElement = element;
+            updatePropertiesPanel(selectedElement);
+          } else {
+            selectedElement = null;
+            updatePropertiesPanel(null);
+          }
+        });
+
+        canvasManager.on("selection-cleared", () => {
+          selectedElement = null;
+          updatePropertiesPanel(null);
+        });
+
+        // Add some example text elements
+        addExampleElements();
+      }
+
+      function addExampleElements() {
+        // Add a title
+        canvasManager.addElement({
+          type: "text",
+          position: { x: 50, y: 50 },
+          size: { width: 300, height: 40 },
+          properties: {
+            text: "SCADA System Dashboard",
+            fontSize: 24,
+            fontWeight: "bold",
+            textAlign: "center",
+            color: "#2196f3",
+            backgroundColor: "#f5f5f5",
+            borderWidth: 2,
+            borderColor: "#2196f3",
+          },
+        });
+
+        // Add a label
+        canvasManager.addElement({
+          type: "text",
+          position: { x: 50, y: 120 },
+          size: { width: 100, height: 25 },
+          properties: {
+            text: "Temperature:",
+            fontSize: 14,
+            fontWeight: "bold",
+            textAlign: "right",
+            color: "#333333",
+          },
+        });
+
+        // Add a value display
+        canvasManager.addElement({
+          type: "text",
+          position: { x: 160, y: 120 },
+          size: { width: 80, height: 25 },
+          properties: {
+            text: "25.4°C",
+            fontSize: 14,
+            textAlign: "center",
+            color: "#4caf50",
+            backgroundColor: "#e8f5e8",
+            borderWidth: 1,
+            borderColor: "#4caf50",
+          },
+        });
+
+        // Add a multi-line description
+        canvasManager.addElement({
+          type: "text",
+          position: { x: 50, y: 200 },
+          size: { width: 400, height: 80 },
+          properties: {
+            text: "This is a multi-line text element that demonstrates text wrapping capabilities. You can edit this text by selecting the element and modifying its properties.",
+            fontSize: 12,
+            textAlign: "left",
+            verticalAlign: "top",
+            backgroundColor: "#fff9c4",
+            borderWidth: 1,
+            borderColor: "#fbc02d",
+            padding: 8,
+          },
+        });
+      }
+
+      function updatePropertiesPanel(element) {
+        const propertiesContent = document.getElementById("properties-content");
+
+        if (!element || element.type !== "text") {
+          propertiesContent.innerHTML =
+            "<p>Select a text element to edit its properties</p>";
+          return;
+        }
+
+        const props = element.properties;
+
+        propertiesContent.innerHTML = `
+                <div class="property-group">
+                    <label>Text Content</label>
+                    <input type="text" id="text-content" value="${props.text || ""}" 
+                           onchange="updateTextProperty('text', this.value)">
+                </div>
+                
+                <div class="property-group">
+                    <label>Font Size</label>
+                    <input type="number" id="font-size" value="${props.fontSize || 14}" min="8" max="72"
+                           oninput="updateFontSize(this.value)">
+                </div>
+                
+                <div class="property-group">
+                    <label>Font Weight</label>
+                    <select id="font-weight" onchange="updateTextProperty('fontWeight', this.value)">
+                        <option value="normal" ${props.fontWeight === "normal" ? "selected" : ""}>Normal</option>
+                        <option value="bold" ${props.fontWeight === "bold" ? "selected" : ""}>Bold</option>
+                        <option value="lighter" ${props.fontWeight === "lighter" ? "selected" : ""}>Lighter</option>
+                        <option value="bolder" ${props.fontWeight === "bolder" ? "selected" : ""}>Bolder</option>
+                    </select>
+                </div>
+                
+                <div class="property-group">
+                    <label>Text Align</label>
+                    <select id="text-align" onchange="updateTextProperty('textAlign', this.value)">
+                        <option value="left" ${props.textAlign === "left" ? "selected" : ""}>Left</option>
+                        <option value="center" ${props.textAlign === "center" ? "selected" : ""}>Center</option>
+                        <option value="right" ${props.textAlign === "right" ? "selected" : ""}>Right</option>
+                    </select>
+                </div>
+                
+                <div class="property-group">
+                    <label>Vertical Align</label>
+                    <select id="vertical-align" onchange="updateTextProperty('verticalAlign', this.value)">
+                        <option value="top" ${props.verticalAlign === "top" ? "selected" : ""}>Top</option>
+                        <option value="middle" ${props.verticalAlign === "middle" ? "selected" : ""}>Middle</option>
+                        <option value="bottom" ${props.verticalAlign === "bottom" ? "selected" : ""}>Bottom</option>
+                    </select>
+                </div>
+                
+                <div class="property-group">
+                    <label>Text Color</label>
+                    <input type="color" id="text-color" value="${props.color || "#000000"}"
+                           onchange="updateTextProperty('color', this.value)">
+                </div>
+                
+                <div class="property-group">
+                    <label>Background Color</label>
+                    <input type="color" id="bg-color" value="${props.backgroundColor === "transparent" ? "#ffffff" : props.backgroundColor || "#ffffff"}"
+                           onchange="updateTextProperty('backgroundColor', this.value)">
+                </div>
+                
+                <div class="property-group">
+                    <label>Border Width</label>
+                    <input type="number" id="border-width" value="${props.borderWidth || 0}" min="0" max="10"
+                           onchange="updateTextProperty('borderWidth', parseInt(this.value))">
+                </div>
+                
+                <div class="property-group">
+                    <label>Border Color</label>
+                    <input type="color" id="border-color" value="${props.borderColor || "#cccccc"}"
+                           onchange="updateTextProperty('borderColor', this.value)">
+                </div>
+            `;
+      }
+
+      window.updateFontSize = function (value) {
+        if (selectedElement) {
+          // Only update if the value is a valid number and not empty
+          const fontSize = parseInt(value);
+          if (!isNaN(fontSize) && fontSize >= 8 && fontSize <= 72) {
+            const updates = {
+              properties: { ...selectedElement.properties, fontSize: fontSize },
+            };
+            canvasManager.updateElement(selectedElement.id, updates);
+            selectedElement.properties.fontSize = fontSize;
+          }
+          // If invalid, don't update but also don't prevent typing
+        }
+      };
+
+      window.updateTextProperty = function (property, value) {
+        if (selectedElement) {
+          const updates = {
+            properties: { ...selectedElement.properties, [property]: value },
+          };
+          canvasManager.updateElement(selectedElement.id, updates);
+          selectedElement.properties[property] = value;
+        }
+      };
+
+      window.addTextElement = function () {
+        canvasManager.addElement({
+          type: "text",
+          position: {
+            x: Math.random() * 400 + 100,
+            y: Math.random() * 300 + 100,
+          },
+          size: { width: 120, height: 30 },
+          properties: {
+            text: "New Text",
+            fontSize: 14,
+            color: "#000000",
+          },
+        });
+      };
+
+      window.addLabelElement = function () {
+        canvasManager.addElement({
+          type: "text",
+          position: {
+            x: Math.random() * 400 + 100,
+            y: Math.random() * 300 + 100,
+          },
+          size: { width: 80, height: 25 },
+          properties: {
+            text: "Label:",
+            fontSize: 12,
+            fontWeight: "bold",
+            textAlign: "right",
+            color: "#666666",
+          },
+        });
+      };
+
+      window.addTitleElement = function () {
+        canvasManager.addElement({
+          type: "text",
+          position: {
+            x: Math.random() * 400 + 100,
+            y: Math.random() * 300 + 100,
+          },
+          size: { width: 200, height: 35 },
+          properties: {
+            text: "Title Text",
+            fontSize: 18,
+            fontWeight: "bold",
+            textAlign: "center",
+            color: "#2196f3",
+            backgroundColor: "#f0f8ff",
+            borderWidth: 1,
+            borderColor: "#2196f3",
+          },
+        });
+      };
+
+      window.clearCanvas = function () {
+        const elements = canvasManager.getAllElements();
+        elements.forEach((element) => {
+          canvasManager.removeElement(element.id);
+        });
+      };
+
+      window.zoomIn = function () {
+        const viewport = canvasManager.getViewport();
+        canvasManager.setZoom(viewport.zoom * 1.2);
+      };
+
+      window.zoomOut = function () {
+        const viewport = canvasManager.getViewport();
+        canvasManager.setZoom(viewport.zoom * 0.8);
+      };
+
+      window.resetView = function () {
+        canvasManager.setZoom(1);
+        canvasManager.setPan({ x: 0, y: 0 });
+      };
+
+      // Initialize when page loads
+      document.addEventListener("DOMContentLoaded", initCanvas);
+    </script>
+  </body>
+</html>
