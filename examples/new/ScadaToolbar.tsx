@@ -61,7 +61,7 @@ const ScadaToolbar: React.FC<ScadaToolbarProps> = ({
         >
           📚 {showElementLibrary ? "Hide" : "Show"} Library
         </button>
-        
+
         <button
           onClick={onTogglePropertiesPanel}
           style={{

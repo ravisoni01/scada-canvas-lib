@@ -40,7 +40,7 @@ export interface ScadaCanvasRef {
 const ScadaCanvas = forwardRef<ScadaCanvasRef, ScadaCanvasProps>(
   (
     {
-      width = 800,
+      width = 1500,
       height = 600,
       backgroundColor = "#f5f5f5",
       gridEnabled = true,
@@ -89,7 +89,8 @@ const ScadaCanvas = forwardRef<ScadaCanvasRef, ScadaCanvasProps>(
       };
 
       const handleSelectionChanged = (event: any) => {
-        onSelectionChanged?.(event.selectedIds || []);
+        console.log("selectedIds", event);
+        onSelectionChanged?.(event.selectedElements || []);
       };
 
       const handleElementUpdated = (event: any) => {

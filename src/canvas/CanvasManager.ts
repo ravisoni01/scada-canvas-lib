@@ -1,19 +1,18 @@
+import { SVG_ELEMENTS, SvgElementDefinition } from "../assets/svgElements";
 import { EventEmitter } from "../core/EventEmitter";
 import {
   CanvasConfig,
   CanvasState,
-  ScadaElement,
-  Point,
-  ViewportState,
-  GridSettings,
   ElementConfig,
+  GridSettings,
+  Point,
+  ScadaElement,
   Size,
+  ViewportState,
 } from "../core/types";
-import { generateId } from "../utils";
-import { InteractionManager } from "../interactions/InteractionManager";
-import { ElementRegistry } from "../elements/ElementRegistry";
 import { ElementFactory } from "../elements/ElementFactory";
-import { SVG_ELEMENTS, SvgElementDefinition } from "../assets/svgElements";
+import { ElementRegistry } from "../elements/ElementRegistry";
+import { InteractionManager } from "../interactions/InteractionManager";
 
 export class CanvasManager extends EventEmitter {
   private canvas: HTMLCanvasElement;
@@ -988,6 +987,9 @@ export class CanvasManager extends EventEmitter {
       return null;
     }
 
+    // Fix: Assign proper zIndex to ensure correct layering
+    element.zIndex = this.state.elements.size;
+
     this.state.elements.set(element.id, element);
     this.emit("element-added", { element });
     return element.id;
@@ -1125,5 +1127,33 @@ export class CanvasManager extends EventEmitter {
     }
 
     this.ctx.fillText(text, x, y);
+  }
+
+  public bringToFront(elementId: string): boolean {
+    const element = this.state.elements.get(elementId);
+    if (!element) return false;
+
+    // Find the highest zIndex
+    const maxZIndex = Math.max(...Array.from(this.state.elements.values()).map(el => el.zIndex));
+    
+    // Set this element's zIndex to be higher than all others
+    element.zIndex = maxZIndex + 1;
+    
+    this.emit("element-updated", { element });
+    return true;
+  }
+
+  public sendToBack(elementId: string): boolean {
+    const element = this.state.elements.get(elementId);
+    if (!element) return false;
+
+    // Find the lowest zIndex
+    const minZIndex = Math.min(...Array.from(this.state.elements.values()).map(el => el.zIndex));
+    
+    // Set this element's zIndex to be lower than all others
+    element.zIndex = minZIndex - 1;
+    
+    this.emit("element-updated", { element });
+    return true;
   }
 }

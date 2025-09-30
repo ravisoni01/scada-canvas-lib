@@ -16,6 +16,11 @@ export interface InteractionState {
   // New: Track potential drag state
   potentialDragElement: string | null;
   dragStartPoint: Point | null;
+  // New: Track cycling state for overlapping elements
+  lastClickPoint: Point | null;
+  lastClickTime: number;
+  overlappingElements: string[];
+  currentCycleIndex: number;
 }
 
 export interface HitTestResult {
@@ -28,6 +33,8 @@ export class InteractionManager extends EventEmitter {
   private elements: Map<string, ScadaElement>;
   private resizeManager: ResizeManager;
   private settings: InteractionSettings;
+  private cycleTimeout = 1000; // 1 second timeout for cycling
+  private clickTolerance = 5; // 5 pixels tolerance for same position
 
   constructor(settings: InteractionSettings = {}) {
     super();
@@ -40,6 +47,11 @@ export class InteractionManager extends EventEmitter {
       // New: Initialize potential drag state
       potentialDragElement: null,
       dragStartPoint: null,
+      // New: Initialize cycling state
+      lastClickPoint: null,
+      lastClickTime: 0,
+      overlappingElements: [],
+      currentCycleIndex: 0,
     };
     this.elements = new Map();
     this.resizeManager = new ResizeManager();
@@ -107,6 +119,90 @@ export class InteractionManager extends EventEmitter {
     }
 
     return { element: null, point: canvasPoint };
+  }
+
+  // New method: Get all overlapping elements at a point
+  public getOverlappingElements(point: Point): ScadaElement[] {
+    const canvasPoint = { ...point };
+    const overlapping: ScadaElement[] = [];
+
+    // Test all elements
+    for (const element of this.elements.values()) {
+      if (!element.visible || element.locked) continue;
+
+      const bounds = {
+        left: element.position.x,
+        top: element.position.y,
+        right: element.position.x + element.size.width,
+        bottom: element.position.y + element.size.height,
+      };
+
+      if (
+        canvasPoint.x >= bounds.left &&
+        canvasPoint.x <= bounds.right &&
+        canvasPoint.y >= bounds.top &&
+        canvasPoint.y <= bounds.bottom
+      ) {
+        overlapping.push(element);
+      }
+    }
+
+    // Sort by z-index (highest first)
+    return overlapping.sort((a, b) => b.zIndex - a.zIndex);
+  }
+
+  // New method: Check if two points are close enough to be considered the same
+  private isPointNear(point1: Point, point2: Point): boolean {
+    const dx = Math.abs(point1.x - point2.x);
+    const dy = Math.abs(point1.y - point2.y);
+    return dx <= this.clickTolerance && dy <= this.clickTolerance;
+  }
+
+  // Enhanced hit test with cycling support
+  public hitTestWithCycling(point: Point): HitTestResult {
+    const currentTime = Date.now();
+    const overlappingElements = this.getOverlappingElements(point);
+
+    if (overlappingElements.length === 0) {
+      // No elements found, reset cycling state
+      this.resetCyclingState();
+      return { element: null, point };
+    }
+
+    // Check if this is a cycling click (same position within timeout)
+    const isCyclingClick = 
+      this.state.lastClickPoint &&
+      this.isPointNear(point, this.state.lastClickPoint) &&
+      (currentTime - this.state.lastClickTime) < this.cycleTimeout &&
+      this.state.overlappingElements.length > 1;
+
+    if (isCyclingClick) {
+      // Cycle to next element
+      this.state.currentCycleIndex = (this.state.currentCycleIndex + 1) % this.state.overlappingElements.length;
+      const elementId = this.state.overlappingElements[this.state.currentCycleIndex];
+      const element = this.elements.get(elementId);
+      
+      this.state.lastClickTime = currentTime;
+      
+      return { element: element || null, point };
+    } else {
+      // New click position or timeout exceeded, start new cycling sequence
+      this.state.lastClickPoint = { ...point };
+      this.state.lastClickTime = currentTime;
+      this.state.overlappingElements = overlappingElements.map(el => el.id);
+      this.state.currentCycleIndex = 0;
+
+      // Return the topmost element (first in sorted array)
+      return { element: overlappingElements[0], point };
+    }
+  }
+
+  // New method: Reset cycling state
+  private resetCyclingState(): void {
+    this.state.lastClickPoint = null;
+    this.state.lastClickTime = 0;
+    this.state.overlappingElements = [];
+    this.state.currentCycleIndex = 0;
   }
 
   public selectElement(

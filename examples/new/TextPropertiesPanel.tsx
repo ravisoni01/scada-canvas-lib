@@ -3,7 +3,10 @@ import { ScadaElement, TextProperties } from "scada-canvas-lib";
 
 interface TextPropertiesPanelProps {
   selectedElement: ScadaElement | null;
-  onUpdateElement: (elementId: string, properties: Partial<TextProperties>) => void;
+  onUpdateElement: (
+    elementId: string,
+    properties: Partial<TextProperties>
+  ) => void;
 }
 
 const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
@@ -21,7 +24,11 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
   const props = selectedElement.properties as TextProperties;
 
   const handlePropertyChange = (property: keyof TextProperties, value: any) => {
-    onUpdateElement(selectedElement.id, { [property]: value });
+    console.log("property", property, "value", value, selectedElement);
+    onUpdateElement(selectedElement.id, {
+      ...selectedElement.properties,
+      [property]: value,
+    });
   };
 
   const handleFontSizeChange = (value: string) => {
@@ -33,13 +40,22 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
   return (
     <div style={{ padding: "16px" }}>
-      <h3 style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: "bold" }}>
+      <h3
+        style={{ margin: "0 0 16px 0", fontSize: "16px", fontWeight: "bold" }}
+      >
         Text Properties
       </h3>
 
       {/* Text Content */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Text Content
         </label>
         <textarea
@@ -59,7 +75,14 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
       {/* Font Size */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Font Size
         </label>
         <input
@@ -67,7 +90,9 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
           value={props.fontSize || 14}
           min="8"
           max="72"
-          onInput={(e) => handleFontSizeChange((e.target as HTMLInputElement).value)}
+          onInput={(e) =>
+            handleFontSizeChange((e.target as HTMLInputElement).value)
+          }
           style={{
             width: "100%",
             padding: "8px",
@@ -80,7 +105,14 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
       {/* Font Weight */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Font Weight
         </label>
         <select
@@ -103,7 +135,14 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
       {/* Text Align */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Text Align
         </label>
         <select
@@ -125,12 +164,21 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
       {/* Vertical Align */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Vertical Align
         </label>
         <select
           value={props.verticalAlign || "middle"}
-          onChange={(e) => handlePropertyChange("verticalAlign", e.target.value)}
+          onChange={(e) =>
+            handlePropertyChange("verticalAlign", e.target.value)
+          }
           style={{
             width: "100%",
             padding: "8px",
@@ -147,7 +195,14 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
       {/* Text Color */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Text Color
         </label>
         <input
@@ -167,14 +222,27 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
       {/* Background Color */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Background Color
         </label>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <input
             type="color"
-            value={props.backgroundColor === "transparent" ? "#ffffff" : (props.backgroundColor || "#ffffff")}
-            onChange={(e) => handlePropertyChange("backgroundColor", e.target.value)}
+            value={
+              props.backgroundColor === "transparent"
+                ? "#ffffff"
+                : props.backgroundColor || "#ffffff"
+            }
+            onChange={(e) =>
+              handlePropertyChange("backgroundColor", e.target.value)
+            }
             style={{
               width: "60px",
               height: "40px",
@@ -185,12 +253,15 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
             }}
           />
           <button
-            onClick={() => handlePropertyChange("backgroundColor", "transparent")}
+            onClick={() =>
+              handlePropertyChange("backgroundColor", "transparent")
+            }
             style={{
               padding: "8px 12px",
               border: "1px solid #ddd",
               borderRadius: "4px",
-              backgroundColor: props.backgroundColor === "transparent" ? "#e3f2fd" : "#fff",
+              backgroundColor:
+                props.backgroundColor === "transparent" ? "#e3f2fd" : "#fff",
               cursor: "pointer",
               fontSize: "12px",
             }}
@@ -202,7 +273,14 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
 
       {/* Border Width */}
       <div style={{ marginBottom: "12px" }}>
-        <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+        <label
+          style={{
+            display: "block",
+            marginBottom: "4px",
+            fontSize: "14px",
+            fontWeight: "500",
+          }}
+        >
           Border Width
         </label>
         <input
@@ -210,7 +288,9 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
           value={props.borderWidth || 0}
           min="0"
           max="10"
-          onChange={(e) => handlePropertyChange("borderWidth", parseInt(e.target.value) || 0)}
+          onChange={(e) =>
+            handlePropertyChange("borderWidth", parseInt(e.target.value) || 0)
+          }
           style={{
             width: "100%",
             padding: "8px",
@@ -224,13 +304,22 @@ const TextPropertiesPanel: React.FC<TextPropertiesPanelProps> = ({
       {/* Border Color */}
       {(props.borderWidth || 0) > 0 && (
         <div style={{ marginBottom: "12px" }}>
-          <label style={{ display: "block", marginBottom: "4px", fontSize: "14px", fontWeight: "500" }}>
+          <label
+            style={{
+              display: "block",
+              marginBottom: "4px",
+              fontSize: "14px",
+              fontWeight: "500",
+            }}
+          >
             Border Color
           </label>
           <input
             type="color"
             value={props.borderColor || "#cccccc"}
-            onChange={(e) => handlePropertyChange("borderColor", e.target.value)}
+            onChange={(e) =>
+              handlePropertyChange("borderColor", e.target.value)
+            }
             style={{
               width: "100%",
               height: "40px",
