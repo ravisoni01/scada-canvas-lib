@@ -6,6 +6,7 @@ export { EventEmitter } from "./core/EventEmitter";
 
 // Canvas management
 export { CanvasManager } from "./canvas/CanvasManager";
+export { DualViewManager } from "./canvas/DualViewManager";
 
 // Interactions
 export { InteractionManager } from "./interactions/InteractionManager";

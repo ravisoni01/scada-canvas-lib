@@ -3,6 +3,7 @@ import ScadaCanvas, { ScadaCanvasRef } from "./ScadaCanvas";
 import ScadaToolbar from "./ScadaToolbar";
 import SvgElementLibrary from "./SvgElementLibrary";
 import TextPropertiesPanel from "./TextPropertiesPanel";
+import AnimatedElementDemo from "./components/AnimatedElementDemo";
 import {
   ScadaElement,
   ElementType,
@@ -25,14 +26,15 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
   initialElements = [],
 }) => {
   const canvasRef = useRef<ScadaCanvasRef>(null);
-  const [selectedCount, setSelectedCount] = useState(0);
+  const [elements, setElements] = useState<ScadaElement[]>([]);
   const [selectedElement, setSelectedElement] = useState<ScadaElement | null>(
     null
   );
-  const [elements, setElements] = useState<ScadaElement[]>([]);
+  const [selectedCount, setSelectedCount] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [showElementLibrary, setShowElementLibrary] = useState(true);
   const [showPropertiesPanel, setShowPropertiesPanel] = useState(true);
+  const [showAnimationDemo, setShowAnimationDemo] = useState(false);
 
   // Handle element addition
   const handleAddElement = useCallback(
@@ -208,6 +210,30 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
         showPropertiesPanel={showPropertiesPanel}
       />
 
+      {/* Animation Demo Toggle */}
+      <div style={{ padding: '8px', borderBottom: '1px solid #ddd', backgroundColor: '#f5f5f5' }}>
+        <button
+          onClick={() => setShowAnimationDemo(!showAnimationDemo)}
+          style={{
+            padding: '4px 12px',
+            backgroundColor: showAnimationDemo ? '#007bff' : '#6c757d',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px'
+          }}
+        >
+          {showAnimationDemo ? 'Hide' : 'Show'} Animation Demo
+        </button>
+      </div>
+
+      {showAnimationDemo && (
+        <div style={{ padding: '10px', borderBottom: '1px solid #ddd' }}>
+          <AnimatedElementDemo />
+        </div>
+      )}
+
       <div style={{ display: "flex", flex: 1 }}>
         {/* Element Library Sidebar */}
         {showElementLibrary && (
@@ -241,7 +267,6 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
         </div>
 
         {/* Properties Panel */}
-        {/* {showPropertiesPanel && ( */}
         <div
           style={{
             width: "280px",
@@ -255,7 +280,6 @@ const ScadaEditor: React.FC<ScadaEditorProps> = ({
             onUpdateElement={handleUpdateTextProperties}
           />
         </div>
-        {/* )} */}
       </div>
 
       <div

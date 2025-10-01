@@ -13,6 +13,7 @@ import {
 import { ElementFactory } from "../elements/ElementFactory";
 import { ElementRegistry } from "../elements/ElementRegistry";
 import { InteractionManager } from "../interactions/InteractionManager";
+import { DualViewManager } from "./DualViewManager";
 
 export class CanvasManager extends EventEmitter {
   private canvas: HTMLCanvasElement;
@@ -20,6 +21,7 @@ export class CanvasManager extends EventEmitter {
   private state: CanvasState;
   private animationFrameId: number | null = null;
   private interactionManager: InteractionManager;
+  private dualViewManager: DualViewManager | null = null;
 
   // SVG caching
   private svgCache: Map<string, HTMLImageElement> = new Map();
@@ -68,6 +70,11 @@ export class CanvasManager extends EventEmitter {
         visible: config.grid?.visible || true,
       },
     };
+
+    // Initialize dual-view manager
+    if (config.dualViewEnabled) {
+      this.dualViewManager = new DualViewManager(this);
+    }
 
     this.setupEventListeners();
     this.startRenderLoop();
@@ -481,6 +488,11 @@ export class CanvasManager extends EventEmitter {
 
   // Add this new method for drawing SVG library elements
   private drawSvgElement(element: ScadaElement): void {
+    // Skip rendering if element is handled by SVG overlay
+    if (element.properties?.renderOnCanvas === false) {
+      return;
+    }
+
     const { size } = element;
     const { width, height } = size;
     const svgPath = element.properties.svgPath;
@@ -947,6 +959,10 @@ export class CanvasManager extends EventEmitter {
     return this.interactionManager;
   }
 
+  // public getDualViewManager(): DualViewManager {
+  //   return this.dualViewManager;
+  // }
+
   public destroy(): void {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -963,6 +979,10 @@ export class CanvasManager extends EventEmitter {
 
     document.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("keyup", this.handleKeyUp);
+
+    // if (this.dualViewManager) {
+    //   this.dualViewManager.destroy();
+    // }
 
     this.removeAllListeners();
     this.interactionManager.removeAllListeners();
@@ -1134,11 +1154,13 @@ export class CanvasManager extends EventEmitter {
     if (!element) return false;
 
     // Find the highest zIndex
-    const maxZIndex = Math.max(...Array.from(this.state.elements.values()).map(el => el.zIndex));
-    
+    const maxZIndex = Math.max(
+      ...Array.from(this.state.elements.values()).map((el) => el.zIndex)
+    );
+
     // Set this element's zIndex to be higher than all others
     element.zIndex = maxZIndex + 1;
-    
+
     this.emit("element-updated", { element });
     return true;
   }
@@ -1148,12 +1170,19 @@ export class CanvasManager extends EventEmitter {
     if (!element) return false;
 
     // Find the lowest zIndex
-    const minZIndex = Math.min(...Array.from(this.state.elements.values()).map(el => el.zIndex));
-    
+    const minZIndex = Math.min(
+      ...Array.from(this.state.elements.values()).map((el) => el.zIndex)
+    );
+
     // Set this element's zIndex to be lower than all others
     element.zIndex = minZIndex - 1;
-    
+
     this.emit("element-updated", { element });
     return true;
   }
+
+  // Add method to check if element is animated
+  // public isElementAnimated(elementId: string): boolean {
+  //   return this.dualViewManager.isElementAnimated(elementId);
+  // }
 }

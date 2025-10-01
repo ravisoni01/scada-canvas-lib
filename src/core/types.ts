@@ -92,6 +92,7 @@ export interface CanvasConfig {
   grid?: Partial<GridSettings>;
   viewport?: Partial<ViewportState>;
   interaction?: InteractionSettings;
+  dualViewEnabled?: boolean;
 }
 
 /**
