@@ -170,26 +170,29 @@ export class InteractionManager extends EventEmitter {
     }
 
     // Check if this is a cycling click (same position within timeout)
-    const isCyclingClick = 
+    const isCyclingClick =
       this.state.lastClickPoint &&
       this.isPointNear(point, this.state.lastClickPoint) &&
-      (currentTime - this.state.lastClickTime) < this.cycleTimeout &&
+      currentTime - this.state.lastClickTime < this.cycleTimeout &&
       this.state.overlappingElements.length > 1;
 
     if (isCyclingClick) {
       // Cycle to next element
-      this.state.currentCycleIndex = (this.state.currentCycleIndex + 1) % this.state.overlappingElements.length;
-      const elementId = this.state.overlappingElements[this.state.currentCycleIndex];
+      this.state.currentCycleIndex =
+        (this.state.currentCycleIndex + 1) %
+        this.state.overlappingElements.length;
+      const elementId =
+        this.state.overlappingElements[this.state.currentCycleIndex];
       const element = this.elements.get(elementId);
-      
+
       this.state.lastClickTime = currentTime;
-      
+
       return { element: element || null, point };
     } else {
       // New click position or timeout exceeded, start new cycling sequence
       this.state.lastClickPoint = { ...point };
       this.state.lastClickTime = currentTime;
-      this.state.overlappingElements = overlappingElements.map(el => el.id);
+      this.state.overlappingElements = overlappingElements.map((el) => el.id);
       this.state.currentCycleIndex = 0;
 
       // Return the topmost element (first in sorted array)
@@ -523,5 +526,9 @@ export class InteractionManager extends EventEmitter {
       x: deltaX <= tolerance ? snappedX : point.x,
       y: deltaY <= tolerance ? snappedY : point.y,
     };
+  }
+  // Add this method to check if resizing is happening
+  public isResizing(): boolean {
+    return this.resizeManager.isResizing();
   }
 }

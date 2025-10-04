@@ -69,6 +69,8 @@ export const SVG_ELEMENTS: SvgElementDefinition[] = [
       diameter: 10,
       material: "steel",
       pressure: 0,
+      animatedSvgPath:
+        "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/extra-long-horizontal-pipe-animated.svg",
     },
   },
   {
@@ -84,6 +86,8 @@ export const SVG_ELEMENTS: SvgElementDefinition[] = [
       diameter: 10,
       material: "steel",
       pressure: 0,
+      animatedSvgPath:
+        "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/extra-long-vertical-pipe-animated.svg",
     },
   },
   {
@@ -479,13 +483,13 @@ export const SVG_ELEMENTS: SvgElementDefinition[] = [
     },
   },
   {
-    id: "polyhouse-1",
+    id: "polyhouse",
     name: "Polyhouse",
     category: SVG_CATEGORIES.CONTAINERS,
     description: "Polyhouse container",
     svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/polyhouse-1.jpg",
-    defaultSize: { width: 100, height: 100 },
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/polyhouse.svg",
+    defaultSize: { width: 800, height: 550 },
     tags: ["container", "polyhouse"],
     properties: {
       capacity: 0,
@@ -494,14 +498,14 @@ export const SVG_ELEMENTS: SvgElementDefinition[] = [
     },
   },
   {
-    id: "polyhouse-2",
-    name: "Polyhouse 2",
+    id: "seedling",
+    name: "Seedling Row",
     category: SVG_CATEGORIES.CONTAINERS,
-    description: "Polyhouse container",
+    description: "Seedling row container",
     svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/polyhouse-2.jpg",
-    defaultSize: { width: 100, height: 100 },
-    tags: ["container", "polyhouse"],
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/seedling-row.svg",
+    defaultSize: { width: 200, height: 50 },
+    tags: ["container", "seedling-row"],
     properties: {
       capacity: 0,
       level: 0,
@@ -509,14 +513,14 @@ export const SVG_ELEMENTS: SvgElementDefinition[] = [
     },
   },
   {
-    id: "polyhouse-3",
-    name: "Polyhouse 3",
+    id: "plant-pot",
+    name: "Plant Pot",
     category: SVG_CATEGORIES.CONTAINERS,
-    description: "Polyhouse container",
+    description: "Plant pot container",
     svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/polyhouse-3.jpg",
-    defaultSize: { width: 100, height: 100 },
-    tags: ["container", "polyhouse"],
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/plant-pot.svg",
+    defaultSize: { width: 70, height: 70 },
+    tags: ["container", "plant-pot"],
     properties: {
       capacity: 0,
       level: 0,
@@ -524,59 +528,48 @@ export const SVG_ELEMENTS: SvgElementDefinition[] = [
     },
   },
   {
-    id: "polyhouse-4",
-    name: "Polyhouse 4",
-    category: SVG_CATEGORIES.CONTAINERS,
-    description: "Polyhouse container",
-    svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/polyhouse-4.jpg",
-    defaultSize: { width: 100, height: 100 },
-    tags: ["container", "polyhouse"],
-    properties: {
-      capacity: 0,
-      level: 0,
-      material: "generic",
-    },
-  },
-  {
-    id: "polyhouse-5",
-    name: "Polyhouse 5",
-    category: SVG_CATEGORIES.CONTAINERS,
-    description: "Polyhouse container",
-    svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/polyhouse-5.webp",
-    defaultSize: { width: 100, height: 100 },
-    tags: ["container", "polyhouse"],
-    properties: {
-      capacity: 0,
-      level: 0,
-      material: "generic",
-    },
-  },
-  {
-    id: "polyhouse-6",
-    name: "Polyhouse 6",
-    category: SVG_CATEGORIES.CONTAINERS,
-    description: "Polyhouse container",
-    svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/polyhouse-6.webp",
-    defaultSize: { width: 100, height: 100 },
-    tags: ["container", "polyhouse"],
-    properties: {
-      capacity: 0,
-      level: 0,
-      material: "generic",
-    },
-  },
-  {
-    id: "circular-fan",
-    name: "Circular Fan",
+    id: "left-circular-fan",
+    name: "Left Side Exhaust Fan",
     category: SVG_CATEGORIES.CONTAINERS,
     description: "Circular fan container",
     svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/fan.svg",
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/left-fan.svg",
     defaultSize: { width: 100, height: 100 },
     tags: ["container", "circular"],
+    properties: {
+      capacity: 0,
+      level: 0,
+      material: "generic",
+      animatedSvgPath:
+        "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/left-animate-fan.svg",
+    },
+  },
+  {
+    id: "right-circular-fan",
+    name: "Right Side Exhaust Fan",
+    category: SVG_CATEGORIES.CONTAINERS,
+    description: "Circular fan container",
+    svgPath:
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/right-fan.svg",
+    defaultSize: { width: 100, height: 100 },
+    tags: ["container", "circular"],
+    properties: {
+      capacity: 0,
+      level: 0,
+      material: "generic",
+      animatedSvgPath:
+        "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/right-animate-fan.svg",
+    },
+  },
+  {
+    id: "fan-pad",
+    name: "Fan Pad",
+    category: SVG_CATEGORIES.CONTAINERS,
+    description: "Fan pad container",
+    svgPath:
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/fan-pad.svg",
+    defaultSize: { width: 100, height: 100 },
+    tags: ["container", "fan-pad"],
     properties: {
       capacity: 0,
       level: 0,
@@ -589,30 +582,34 @@ export const SVG_ELEMENTS: SvgElementDefinition[] = [
     category: SVG_CATEGORIES.CONTAINERS,
     description: "Bulb container",
     svgPath:
-      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/bulb.svg",
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/light.svg",
     defaultSize: { width: 100, height: 100 },
     tags: ["container", "bulb"],
     properties: {
       capacity: 0,
       level: 0,
       material: "generic",
+      animatedSvgPath:
+        "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/light-animated.svg",
     },
   },
-  // {
-  //   id: "square-box-2",
-  //   name: "Blue Square Box",
-  //   category: SVG_CATEGORIES.CONTAINERS,
-  //   description: "Simple square box container",
-  //   svgPath:
-  //     "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/sqaure-box-2.svg",
-  //   defaultSize: { width: 100, height: 100 },
-  //   tags: ["container", "square", "box", "simple"],
-  //   properties: {
-  //     capacity: 0,
-  //     level: 0,
-  //     material: "generic",
-  //   },
-  // },
+  {
+    id: "fogger-pump",
+    name: "Fogger Pump",
+    category: SVG_CATEGORIES.CONTAINERS,
+    description: "Fogger pump container",
+    svgPath:
+      "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/fogger.svg",
+    defaultSize: { width: 80, height: 80 },
+    tags: ["container", "fogger-pump"],
+    properties: {
+      capacity: 0,
+      level: 0,
+      material: "generic",
+      animatedSvgPath:
+        "https://s3.ap-south-1.amazonaws.com/app.sandbox.growloc.farm/scada/fogger-animated.svg",
+    },
+  },
 ];
 
 // Utility functions

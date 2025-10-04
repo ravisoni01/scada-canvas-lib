@@ -103,4 +103,5 @@ export interface ElementConfig {
   position: Point;
   size?: Size;
   properties?: Record<string, any>;
+  useAnimatedPath?: boolean;
 }

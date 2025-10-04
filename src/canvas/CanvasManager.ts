@@ -192,12 +192,13 @@ export class CanvasManager extends EventEmitter {
       Array.from(this.state.elements.values())
     );
 
-    // Check if we're starting a canvas drag (only if no element interaction)
+    // Check if we're starting a canvas drag (only if no element interaction AND not resizing)
     const hitResult = this.interactionManager.hitTest(canvasPos);
     if (
       !hitResult.element &&
       !this.interactionManager.isDragging() &&
-      !this.interactionManager.isPotentialDrag()
+      !this.interactionManager.isPotentialDrag() &&
+      !this.interactionManager.isResizing() // Add this check
     ) {
       this.isCanvasDragging = true;
       this.canvas.style.cursor = "grabbing";
@@ -217,7 +218,8 @@ export class CanvasManager extends EventEmitter {
     if (this.interactionManager.isDragging()) {
       // Element is being dragged - pass grid settings for precise snapping
       this.interactionManager.updateDrag(canvasPos, this.state.grid);
-    } else if (this.isCanvasDragging) {
+    } else if (this.isCanvasDragging && !this.interactionManager.isResizing()) {
+      // Add resize check here
       // Panning the canvas
       const deltaX = screenPos.x - this.lastMousePos.x;
       const deltaY = screenPos.y - this.lastMousePos.y;
@@ -596,9 +598,9 @@ export class CanvasManager extends EventEmitter {
     }
 
     // Apply status indicators (for pumps, valves, etc.)
-    if (element.properties?.status) {
-      this.drawStatusIndicator(element);
-    }
+    // if (element.properties?.status) {
+    //   this.drawStatusIndicator(element);
+    // }
   }
 
   // Add status indicators for interactive elements
@@ -836,11 +838,27 @@ export class CanvasManager extends EventEmitter {
   }
 
   // Public API methods
-  public addElement(config: ElementConfig): string {
+  public addElement(
+    config: ElementConfig & { useAnimatedPath?: boolean }
+  ): string {
     // Validate element type
     const validTypes = ["pipe", "pump", "valve", "text"];
     if (!validTypes.includes(config.type)) {
       throw new Error(`Invalid element type: ${config.type}`);
+    }
+
+    const useAnimatedPath = config.useAnimatedPath || false;
+
+    if (config.properties?.svgPath && useAnimatedPath) {
+      // Determine the appropriate SVG path based on animation preference
+      const svgPath = this.determineSvgPath(config.properties, useAnimatedPath);
+
+      // Update properties with the selected path and animation flag
+      config.properties = {
+        ...config.properties,
+        svgPath: svgPath,
+        isAnimated: useAnimatedPath,
+      };
     }
 
     // Use ElementFactory to create element with proper defaults
@@ -871,6 +889,19 @@ export class CanvasManager extends EventEmitter {
 
     this.emit("element-added", { element });
     return element.id;
+  }
+
+  private determineSvgPath(
+    properties: Record<string, any>,
+    useAnimatedPath: boolean
+  ): string {
+    // If animated path is requested and available, use it
+    if (useAnimatedPath && properties.animatedSvgPath) {
+      return properties.animatedSvgPath;
+    }
+
+    // Otherwise, use the standard SVG path
+    return properties.svgPath;
   }
 
   public removeElement(id: string): boolean {
