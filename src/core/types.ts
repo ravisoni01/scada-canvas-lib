@@ -43,6 +43,7 @@ export interface CanvasState {
   selection: string[];
   viewport: ViewportState;
   grid: GridSettings;
+  backgroundColor?: string; // Add background color support
 }
 
 export interface ViewportState {

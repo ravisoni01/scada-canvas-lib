@@ -14,6 +14,8 @@ import { ElementFactory } from "../elements/ElementFactory";
 import { ElementRegistry } from "../elements/ElementRegistry";
 import { InteractionManager } from "../interactions/InteractionManager";
 import { DualViewManager } from "./DualViewManager";
+import { RenderWorker } from "../workers/RenderWorker";
+import { OffscreenRenderer } from "./OffscreenRenderer";
 
 export class CanvasManager extends EventEmitter {
   private canvas: HTMLCanvasElement;
@@ -32,6 +34,18 @@ export class CanvasManager extends EventEmitter {
   private lastMousePos: Point = { x: 0, y: 0 };
   private mouseDownPos: Point = { x: 0, y: 0 };
   private dragThreshold = 3; // Reduced from 5 to 3 pixels for canvas panning
+
+  // Threading and performance
+  private renderWorker: RenderWorker | null = null;
+  private offscreenRenderer: OffscreenRenderer | null = null;
+  private renderQueue: ScadaElement[] = [];
+  private isRendering = false;
+  private frameBuffer: ImageData | null = null;
+
+  // Performance settings
+  private maxElementsPerFrame = 50;
+  private useWebWorkers = true;
+  private useOffscreenCanvas = true;
 
   constructor(config: CanvasConfig) {
     super();
@@ -74,6 +88,18 @@ export class CanvasManager extends EventEmitter {
     // Initialize dual-view manager
     if (config.dualViewEnabled) {
       this.dualViewManager = new DualViewManager(this);
+    }
+
+    // Initialize threading support
+    if (this.useWebWorkers) {
+      this.renderWorker = new RenderWorker();
+    }
+
+    if (this.useOffscreenCanvas && "OffscreenCanvas" in window) {
+      this.offscreenRenderer = new OffscreenRenderer(
+        this.canvas.width,
+        this.canvas.height
+      );
     }
 
     this.setupEventListeners();
@@ -387,30 +413,69 @@ export class CanvasManager extends EventEmitter {
     render();
   }
 
-  private render(): void {
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  private async render(): Promise<void> {
+    if (this.isRendering) return;
+    this.isRendering = true;
 
-    // Save context state
-    this.ctx.save();
+    try {
+      // Clear canvas with background color
+      this.ctx.fillStyle = this.state.backgroundColor || "#f5f5f5";
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Apply viewport transformations
-    this.ctx.translate(this.state.viewport.pan.x, this.state.viewport.pan.y);
-    this.ctx.scale(this.state.viewport.zoom, this.state.viewport.zoom);
+      // Save context state
+      this.ctx.save();
 
-    // Draw grid if enabled
-    if (this.state.grid.enabled && this.state.grid.visible) {
-      this.drawGrid();
+      // Apply viewport transformations
+      this.ctx.translate(this.state.viewport.pan.x, this.state.viewport.pan.y);
+      this.ctx.scale(this.state.viewport.zoom, this.state.viewport.zoom);
+
+      // Draw grid if enabled (should always be drawn, regardless of elements)
+      if (this.state.grid.enabled && this.state.grid.visible) {
+        this.drawGrid();
+      }
+
+      // Get all elements
+      const allElements = Array.from(this.state.elements.values());
+
+      // Only process elements if they exist
+      if (allElements.length > 0) {
+        // Use Web Worker for visibility culling if available
+        let visibleElements: ScadaElement[];
+        if (this.renderWorker && allElements.length > 100) {
+          const visibleIds = await this.renderWorker.calculateVisibility(
+            allElements,
+            this.state.viewport
+          );
+          visibleElements = allElements.filter((el) =>
+            visibleIds.includes(el.id)
+          );
+        } else {
+          visibleElements = this.cullInvisibleElements(allElements);
+        }
+
+        // Batch render elements
+        if (
+          this.useOffscreenCanvas &&
+          this.offscreenRenderer &&
+          visibleElements.length > this.maxElementsPerFrame
+        ) {
+          await this.renderWithOffscreenCanvas(visibleElements);
+        } else {
+          await this.renderElementsBatched(visibleElements);
+        }
+      }
+
+      // Always draw selection indicators (even if no elements, for selection box)
+      this.drawSelectionIndicators();
+
+      // Restore context state
+      this.ctx.restore();
+    } catch (error) {
+      console.error("Rendering error:", error);
+      this.ctx.restore();
+    } finally {
+      this.isRendering = false;
     }
-
-    // Draw elements
-    this.drawElements();
-
-    // Draw selection indicators
-    this.drawSelectionIndicators();
-
-    // Restore context state
-    this.ctx.restore();
   }
 
   private drawGrid(): void {
@@ -442,17 +507,105 @@ export class CanvasManager extends EventEmitter {
     this.ctx.stroke();
   }
 
-  private drawElements(): void {
+  private async renderWithOffscreenCanvas(
+    elements: ScadaElement[]
+  ): Promise<void> {
+    if (!this.offscreenRenderer) return;
+
+    try {
+      const frameData = await this.offscreenRenderer.renderElements(
+        elements,
+        this.state.viewport
+      );
+
+      // Draw the rendered frame to main canvas
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = frameData.width;
+      tempCanvas.height = frameData.height;
+      const tempCtx = tempCanvas.getContext("2d")!;
+      tempCtx.putImageData(frameData, 0, 0);
+
+      this.ctx.drawImage(tempCanvas, 0, 0);
+    } catch (error) {
+      console.error(
+        "Offscreen rendering failed, falling back to main thread:",
+        error
+      );
+      await this.renderElementsBatched(elements);
+    }
+  }
+
+  private async renderElementsBatched(elements: ScadaElement[]): Promise<void> {
     // Sort elements by zIndex
-    const sortedElements = Array.from(this.state.elements.values()).sort(
-      (a, b) => a.zIndex - b.zIndex
+    const sortedElements = elements.sort((a, b) => a.zIndex - b.zIndex);
+    const batches = this.createBatches(
+      sortedElements,
+      this.maxElementsPerFrame
     );
 
-    for (const element of sortedElements) {
-      if (element.visible) {
-        this.drawElement(element);
-      }
+    for (const batch of batches) {
+      await this.renderBatch(batch);
+
+      // Yield control to prevent blocking
+      await this.yieldToMainThread();
     }
+  }
+
+  private createBatches<T>(array: T[], batchSize: number): T[][] {
+    const batches: T[][] = [];
+    for (let i = 0; i < array.length; i += batchSize) {
+      batches.push(array.slice(i, i + batchSize));
+    }
+    return batches;
+  }
+
+  private async renderBatch(elements: ScadaElement[]): Promise<void> {
+    return new Promise((resolve) => {
+      elements.forEach((element) => {
+        if (element.visible) {
+          this.drawElement(element);
+        }
+      });
+      resolve();
+    });
+  }
+
+  private yieldToMainThread(): Promise<void> {
+    return new Promise((resolve) => {
+      if ("scheduler" in window && "postTask" in (window as any).scheduler) {
+        // Use Scheduler API if available
+        (window as any).scheduler.postTask(() => resolve(), {
+          priority: "background",
+        });
+      } else {
+        // Fallback to setTimeout
+        setTimeout(resolve, 0);
+      }
+    });
+  }
+
+  private cullInvisibleElements(elements: ScadaElement[]): ScadaElement[] {
+    const viewport = this.state.viewport;
+    const bounds = viewport.bounds;
+
+    return elements.filter((element) => {
+      const screenPos = {
+        x: (element.position.x + viewport.pan.x) * viewport.zoom,
+        y: (element.position.y + viewport.pan.y) * viewport.zoom,
+      };
+
+      const scaledSize = {
+        width: element.size.width * viewport.zoom,
+        height: element.size.height * viewport.zoom,
+      };
+
+      return !(
+        screenPos.x + scaledSize.width < 0 ||
+        screenPos.y + scaledSize.height < 0 ||
+        screenPos.x > bounds.width ||
+        screenPos.y > bounds.height
+      );
+    });
   }
 
   // Add this method to replace the current drawElement method
@@ -784,6 +937,7 @@ export class CanvasManager extends EventEmitter {
   }
 
   private drawSelectionIndicators(): void {
+    // Draw element selection indicators
     const selectedElements = this.interactionManager.getSelectedElements();
 
     for (const elementId of selectedElements) {
@@ -812,6 +966,9 @@ export class CanvasManager extends EventEmitter {
 
       this.ctx.restore();
     }
+
+    // Note: Selection box (drag selection) functionality not yet implemented
+    // this.drawSelectionBox();
   }
 
   private drawResizeHandles(element: ScadaElement): void {
@@ -994,6 +1151,23 @@ export class CanvasManager extends EventEmitter {
   //   return this.dualViewManager;
   // }
 
+  // Performance configuration methods
+  public setPerformanceSettings(settings: {
+    maxElementsPerFrame?: number;
+    useWebWorkers?: boolean;
+    useOffscreenCanvas?: boolean;
+  }): void {
+    if (settings.maxElementsPerFrame !== undefined) {
+      this.maxElementsPerFrame = settings.maxElementsPerFrame;
+    }
+    if (settings.useWebWorkers !== undefined) {
+      this.useWebWorkers = settings.useWebWorkers;
+    }
+    if (settings.useOffscreenCanvas !== undefined) {
+      this.useOffscreenCanvas = settings.useOffscreenCanvas;
+    }
+  }
+
   public destroy(): void {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
@@ -1010,6 +1184,15 @@ export class CanvasManager extends EventEmitter {
 
     document.removeEventListener("keydown", this.handleKeyDown);
     document.removeEventListener("keyup", this.handleKeyUp);
+
+    // Cleanup threading resources
+    if (this.renderWorker) {
+      this.renderWorker.destroy();
+    }
+
+    if (this.offscreenRenderer) {
+      // Cleanup offscreen renderer
+    }
 
     // if (this.dualViewManager) {
     //   this.dualViewManager.destroy();
